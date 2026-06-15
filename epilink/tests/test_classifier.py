@@ -22,17 +22,17 @@ class TestClassifier:
 
     @pytest.mark.asyncio
     async def test_classify_group_a(self, db_session: AsyncSession, seed_diseases):
-        assert await classify_reporting_group(db_session, "A39.0") == "A"
-        assert await classify_reporting_group(db_session, "A00.1") == "A"
+        assert classify_reporting_group("A39.0") == "A"
+        assert classify_reporting_group("A00.1") == "A"
 
     @pytest.mark.asyncio
     async def test_classify_group_b(self, db_session: AsyncSession, seed_diseases):
-        assert await classify_reporting_group(db_session, "B26") == "B"
+        assert classify_reporting_group("B26") == "B"
 
     @pytest.mark.asyncio
     async def test_classify_not_found(self, db_session: AsyncSession, seed_diseases):
         with pytest.raises(ValueError, match="not found"):
-            await classify_reporting_group(db_session, "INVALID")
+            classify_reporting_group("INVALID")
 
     @pytest.mark.asyncio
     async def test_alert_window_minutes(self, db_session: AsyncSession, seed_diseases):
@@ -51,5 +51,5 @@ class TestClassifier:
 
     @pytest.mark.asyncio
     async def test_b26_mu_classification(self, db_session: AsyncSession, seed_diseases):
-        assert await classify_reporting_group(db_session, "B26_MU") == "A"
+        assert classify_reporting_group("B26_MU") == "A"
         assert await is_immediate_alert(db_session, "B26_MU") is True

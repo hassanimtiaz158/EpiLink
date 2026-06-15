@@ -81,22 +81,21 @@ async def seed_diseases(db_session: AsyncSession):
     from models.disease_registry import DiseaseRegistry
 
     group_a = [
-        ("A39.0", "Meningococcal Meningitis", "التهاب السحايا بالمكورات", "A", 60),
-        ("A80", "Acute Flaccid Paralysis", "الشلل الرخو الحاد", "A", 60),
-        ("A00.1", "Cholera", "الكوليرا", "A", 60),
-        ("B26_MU", "Mumps", "النكاف", "A", 60),
+        ("A39.0", "Meningococcal Meningitis", "A", 60),
+        ("A80", "Acute Flaccid Paralysis", "A", 60),
+        ("A00.1", "Cholera", "A", 60),
+        ("B26_MU", "Mumps", "A", 60),
     ]
     group_b = [
-        ("B26", "Viral Hepatitis", "التهاب الكبدي الفيروسي", "B", None),
-        ("A01.0", "Typhoid Fever", "التيفود", "B", None),
+        ("B26", "Viral Hepatitis", "B", None),
+        ("A01.0", "Typhoid Fever", "B", None),
     ]
     all_diseases = group_a + group_b
-    for code, en, ar, grp, mins in all_diseases:
+    for code, name, grp, mins in all_diseases:
         d = DiseaseRegistry(
             icd10_code=code,
-            name_en=en,
-            name_ar=ar,
-            reporting_group=grp,
+            name=name,
+            group_label=grp,
             alert_minutes=mins,
         )
         db_session.add(d)

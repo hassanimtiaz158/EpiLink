@@ -1,63 +1,106 @@
 import logging
 from datetime import datetime, timezone
 from typing import Optional
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Query
+from fastapi.responses import JSONResponse
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
 from models.alert import Alert
-from schemas.alert import AlertOut, AlertReviewSchema
+from schemas.alert import AlertOut, AlertReviewSchema, ReviewResponse, AlertListResponse
+from services.alert_dispatcher import dispatch_alert_record
 
 logger = logging.getLogger("epilink.alert_router")
 
 router = APIRouter(prefix="/api/v1", tags=["alert"])
 
 
-@router.get("/alerts", response_model=list[AlertOut])
+@router.get("/alerts", response_model=AlertListResponse)
 async def list_alerts(
     governorate: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     icd10_code: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=200),
+    alert_level: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
     stmt = select(Alert)
+    count_stmt = select(func.count(Alert.id))
 
     if governorate:
         stmt = stmt.where(Alert.governorate == governorate)
+        count_stmt = count_stmt.where(Alert.governorate == governorate)
     if status:
         stmt = stmt.where(Alert.status == status)
+        count_stmt = count_stmt.where(Alert.status == status)
     if icd10_code:
         stmt = stmt.where(Alert.icd10_code == icd10_code)
+        count_stmt = count_stmt.where(Alert.icd10_code == icd10_code)
+    if alert_level:
+        stmt = stmt.where(Alert.alert_level == alert_level)
+        count_stmt = count_stmt.where(Alert.alert_level == alert_level)
+
+    total_result = await db.execute(count_stmt)
+    total = total_result.scalar() or 0
 
     stmt = stmt.order_by(Alert.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     alerts = result.scalars().all()
-    return alerts
+
+    return AlertListResponse(
+        total=total,
+        alerts=[AlertOut.model_validate(a) for a in alerts],
+    )
 
 
-@router.patch("/alerts/{alert_id}/review", response_model=AlertOut)
+@router.patch("/alerts/{alert_id}/review", response_model=ReviewResponse)
 async def review_alert(
     alert_id: str,
     review_data: AlertReviewSchema,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Alert).where(Alert.id == alert_id))
+    try:
+        alert_uuid = UUID(alert_id)
+    except ValueError:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Alert not found", "code": "ALERT_NOT_FOUND"},
+        )
+
+    result = await db.execute(select(Alert).where(Alert.id == alert_uuid))
     alert = result.scalar_one_or_none()
 
     if alert is None:
-        raise HTTPException(
+        return JSONResponse(
             status_code=404,
-            detail={"error": f"Alert {alert_id} not found", "code": "NOT_FOUND"},
+            content={"error": "Alert not found", "code": "ALERT_NOT_FOUND"},
         )
 
+    if alert.review_decision is not None:
+        return JSONResponse(
+            status_code=409,
+            content={"error": "Alert has already been reviewed", "code": "ALREADY_REVIEWED"},
+        )
+
+    reviewed_at = datetime.now(timezone.utc)
     alert.status = review_data.decision
-    alert.reviewed_at = datetime.now(timezone.utc)
-    alert.reviewer_decision = review_data.decision
+    alert.reviewed_at = reviewed_at
+    alert.review_decision = review_data.decision
+    alert.reviewed_by = review_data.reviewed_by
+    alert.review_notes = review_data.notes
     await db.commit()
     await db.refresh(alert)
 
-    return alert
+    # If confirmed and not already dispatched, dispatch now
+    if review_data.decision == "confirmed" and alert.status != "dispatched":
+        await dispatch_alert_record(alert)
+
+    return ReviewResponse(
+        alert_id=str(alert.id),
+        status=alert.status,
+        reviewed_at=reviewed_at.isoformat(),
+    )

@@ -19,6 +19,7 @@ async def health_check():
 
     return {
         "status": "ok",
-        "db": db_status,
+        "version": "1.0.0",
+        "database": db_status,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }

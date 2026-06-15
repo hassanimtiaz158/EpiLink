@@ -11,7 +11,7 @@ class TestReport:
             "governorate": "Cairo",
             "district": "Maadi",
             "age_group": "15-29",
-            "sex": "M",
+            "sex": "Male",
             "nationality": "Egyptian",
             "icd10_code": "A39.0",
             "symptom_onset_date": "2026-06-10",
@@ -22,11 +22,12 @@ class TestReport:
             "submission_mode": "online",
         }
         response = await client.post("/api/v1/report", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
         assert data["reporting_group"] == "A"
         assert len(data["report_id"]) > 0
+        assert data["alert_triggered"] is True
 
     @pytest.mark.asyncio
     async def test_submit_group_b_report(self, client: AsyncClient, seed_diseases):
@@ -36,7 +37,7 @@ class TestReport:
             "governorate": "Alexandria",
             "district": "Montaza",
             "age_group": "30-59",
-            "sex": "F",
+            "sex": "Female",
             "nationality": "Egyptian",
             "icd10_code": "B26",
             "symptom_onset_date": "2026-06-08",
@@ -47,10 +48,11 @@ class TestReport:
             "submission_mode": "online",
         }
         response = await client.post("/api/v1/report", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
         assert data["reporting_group"] == "B"
+        assert data["alert_triggered"] is False
 
     @pytest.mark.asyncio
     async def test_invalid_icd10(self, client: AsyncClient, seed_diseases):
@@ -60,7 +62,7 @@ class TestReport:
             "governorate": "Giza",
             "district": "Dokki",
             "age_group": "5-14",
-            "sex": "M",
+            "sex": "Male",
             "icd10_code": "INVALID99",
             "symptom_onset_date": "2026-06-10",
             "diagnosis_basis": "Clinical",
@@ -82,7 +84,7 @@ class TestReport:
             "governorate": "Luxor",
             "district": "City Center",
             "age_group": "60+",
-            "sex": "F",
+            "sex": "Female",
             "icd10_code": "A39.0",
             "symptom_onset_date": "2026-06-09",
             "diagnosis_basis": "Clinical",
@@ -92,7 +94,7 @@ class TestReport:
             "submission_mode": "offline-cached",
         }
         response = await client.post("/api/v1/report", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
         assert data["reporting_group"] == "A"

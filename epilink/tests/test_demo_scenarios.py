@@ -7,6 +7,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core import database as core_db
 from core.config import settings
 from models.alert import Alert
 from models.case_report import CaseReport
@@ -15,17 +16,36 @@ from models.drift_report import DriftReport
 from services.drift_monitor import weekly_drift_check
 
 
-async def _poll_alert(db: AsyncSession, icd10_code: str, timeout: float = 5.0):
+async def _poll_alert(icd10_code: str, timeout: float = 5.0):
+    """Poll for alert with dispatched status using a fresh session."""
     start = datetime.now()
     while (datetime.now() - start).total_seconds() < timeout:
-        result = await db.execute(
-            select(Alert)
-            .where(Alert.icd10_code == icd10_code)
-            .order_by(Alert.created_at.desc())
-        )
-        alert = result.scalars().first()
-        if alert is not None:
-            return alert
+        # Use a fresh session to avoid session caching issues
+        async with core_db.async_session_factory() as db:
+            result = await db.execute(
+                select(Alert)
+                .where(Alert.icd10_code == icd10_code)
+                .order_by(Alert.created_at.desc())
+            )
+            alert = result.scalars().first()
+            if alert is not None and alert.status == "dispatched":
+                return alert
+        await asyncio.sleep(0.1)
+    return None
+
+
+async def _poll_alert_any(icd10_code: str, timeout: float = 5.0):
+    start = datetime.now()
+    while (datetime.now() - start).total_seconds() < timeout:
+        async with core_db.async_session_factory() as db:
+            result = await db.execute(
+                select(Alert)
+                .where(Alert.icd10_code == icd10_code)
+                .order_by(Alert.created_at.desc())
+            )
+            alert = result.scalars().first()
+            if alert is not None:
+                return alert
         await asyncio.sleep(0.1)
     return None
 
@@ -42,7 +62,7 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
             text="ok",
         )
         httpx_mock.add_response(
-            url=settings.who_webhook_url,
+            url=settings.who_fhir_url,
             method="POST",
             status_code=200,
             text="ok",
@@ -54,7 +74,7 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
             "governorate": "Cairo",
             "district": "Nasr City",
             "age_group": "30-59",
-            "sex": "M",
+            "sex": "Male",
             "icd10_code": "A39.0",
             "symptom_onset_date": "2026-06-10",
             "diagnosis_basis": "Clinical",
@@ -64,10 +84,11 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
             "submission_mode": "online",
         }
         response = await client.post("/api/v1/report", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
         assert data["reporting_group"] == "A"
+        assert data["alert_triggered"] is True
 
         report_result = await db_session.execute(
             select(CaseReport).where(
@@ -77,20 +98,22 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
         report = report_result.scalar_one_or_none()
         assert report is not None
 
-        alert = await _poll_alert(db_session, "A39.0", timeout=5.0)
+        # Give background task time to start
+        await asyncio.sleep(0.1)
+
+        alert = await _poll_alert("A39.0", timeout=5.0)
         assert alert is not None, "Alert was not created by background task"
         assert alert.icd10_code == "A39.0"
-        assert alert.status == "PENDING_HUMAN_REVIEW"
+        assert alert.status == "dispatched"
 
         patch_response = await client.patch(
             f"/api/v1/alerts/{alert.id}/review",
-            json={"decision": "APPROVED"},
+            json={"decision": "confirmed", "reviewed_by": "epi-officer-01", "notes": "Confirmed cluster"},
         )
         assert patch_response.status_code == 200
         patch_data = patch_response.json()
-        assert patch_data["status"] == "APPROVED"
-        assert patch_data["reviewer_decision"] == "APPROVED"
-        assert patch_data["id"] == alert.id
+        assert patch_data["status"] == "confirmed"
+        assert patch_data["alert_id"] == str(alert.id)
 
 
 class TestDemoScenario2_OfflineSync:
@@ -104,7 +127,7 @@ class TestDemoScenario2_OfflineSync:
             "governorate": "Giza",
             "district": "Haram",
             "age_group": "1-4",
-            "sex": "F",
+            "sex": "Female",
             "icd10_code": "A01.0",
             "symptom_onset_date": "2026-06-08",
             "diagnosis_basis": "Lab-confirmed",
@@ -114,7 +137,7 @@ class TestDemoScenario2_OfflineSync:
             "submission_mode": "offline-cached",
         }
         response = await client.post("/api/v1/report", json=payload)
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
         assert data["reporting_group"] == "B"
@@ -142,7 +165,7 @@ class TestDemoScenario3_SMSFallback:
             text="ok",
         )
         httpx_mock.add_response(
-            url=settings.who_webhook_url,
+            url=settings.who_fhir_url,
             method="POST",
             status_code=200,
             text="ok",
@@ -164,7 +187,7 @@ class TestDemoScenario3_SMSFallback:
         assert report.facility_id == "EGY042"
         assert report.icd10_code == "A39.0"
 
-        alert = await _poll_alert(db_session, "A39.0", timeout=5.0)
+        alert = await _poll_alert_any("A39.0", timeout=5.0)
         assert alert is not None, "Alert was not created by background task"
         assert alert.icd10_code == "A39.0"
 
@@ -187,6 +210,7 @@ class TestDemoScenario4_DriftDetection:
         now = datetime.now(timezone.utc)
         today = now.date()
 
+        # Create baseline data for 12 weeks (48 reports)
         for week_offset in range(1, 13):
             week_start = today - timedelta(weeks=week_offset)
             for _ in range(4):
@@ -201,12 +225,13 @@ class TestDemoScenario4_DriftDetection:
                     id=uuid.uuid4(),
                     report_id=uuid.uuid4(),
                     submitted_at=report_dt,
+                    epi_week=epi,
                     facility_id=f"EGY-BASE-{week_offset}",
                     physician_id="abc123",
                     governorate=governorate,
                     district="Multiple",
                     age_group="30-59",
-                    sex="M",
+                    sex="Male",
                     icd10_code=code,
                     disease_name="Cholera",
                     reporting_group="A",
@@ -216,12 +241,12 @@ class TestDemoScenario4_DriftDetection:
                     outcome="Alive",
                     lab_sample_taken=True,
                     submission_mode="online",
-                    epi_week=epi,
                 )
                 db_session.add(report)
 
+        # Create spike: 50 reports this week (alert rate = 0 alerts / 50 reports = 0 < 0.005)
         current_week_start = today - timedelta(days=today.weekday())
-        for i in range(15):
+        for i in range(50):
             report_date = current_week_start + timedelta(days=i % 7)
             report_dt = datetime.combine(
                 report_date, datetime.min.time(), tzinfo=timezone.utc
@@ -231,12 +256,13 @@ class TestDemoScenario4_DriftDetection:
                 id=uuid.uuid4(),
                 report_id=uuid.uuid4(),
                 submitted_at=report_dt,
+                epi_week=epi,
                 facility_id=f"EGY-SPIKE-{i}",
                 physician_id="abc456",
                 governorate=governorate,
                 district="Multiple",
                 age_group="30-59",
-                sex="F",
+                sex="Female",
                 icd10_code=code,
                 disease_name="Cholera",
                 reporting_group="A",
@@ -246,7 +272,6 @@ class TestDemoScenario4_DriftDetection:
                 outcome="Alive",
                 lab_sample_taken=True,
                 submission_mode="online",
-                epi_week=epi,
             )
             db_session.add(spike)
 
@@ -255,4 +280,4 @@ class TestDemoScenario4_DriftDetection:
         drift = await weekly_drift_check(db_session)
 
         assert drift is not None
-        assert drift.drift_detected is True
+        assert drift["drift_detected"] is True

@@ -11,11 +11,16 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from core.database import Base
-from models import DiseaseRegistry, CaseReport, Alert, DriftReport  # noqa: F401
+from models import DiseaseRegistry, CaseReport, Alert, DriftReport, AuditLog, BaselineCache  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Use DATABASE_URL from environment if available
+database_url = os.environ.get("DATABASE_URL", "")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 

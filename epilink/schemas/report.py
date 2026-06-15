@@ -10,7 +10,7 @@ class ReportSchema(BaseModel):
     governorate: str
     district: str
     age_group: Literal["<1", "1-4", "5-14", "15-29", "30-59", "60+"]
-    sex: Literal["M", "F"]
+    sex: Literal["Male", "Female"]
     nationality: str = "Egyptian"
     icd10_code: str
     symptom_onset_date: date
@@ -25,3 +25,5 @@ class ReportResponse(BaseModel):
     status: str
     report_id: str
     reporting_group: str
+    alert_triggered: bool
+    message: str
