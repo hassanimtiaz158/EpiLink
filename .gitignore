@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*$py.class
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+epilink/venv
+
+# Environment & secrets
+.env
+epilink/.env
+
+# OS
+.DS_Store
+Thumbs.db
