@@ -1,0 +1,53 @@
+-- EpiLink Egypt DES Disease Registry Seed
+-- Group A: Immediate alert (alert_minutes = 60)
+-- Group B: Weekly reporting (alert_minutes = NULL)
+
+INSERT INTO disease_registry (icd10_code, name_en, name_ar, reporting_group, alert_minutes) VALUES
+-- GROUP A — Immediate
+('A80', 'Acute Flaccid Paralysis / Poliomyelitis', 'الشلل الرخو الحاد', 'A', 60),
+('A36', 'Diphtheria', 'الدفتيريا', 'A', 60),
+('A37', 'Pertussis (Whooping Cough)', 'السعال الديكي', 'A', 60),
+('A33', 'Neonatal Tetanus', 'التيتانوس الوليدي', 'A', 60),
+('U07.1', 'COVID-19', 'كورونا المستجدة', 'A', 60),
+('B34.2', 'MERS-CoV', 'متالزمة الشرق الأوسط', 'A', 60),
+('A39.0', 'Meningococcal Meningitis', 'التهاب السحايا بالمكورات', 'A', 60),
+('G00', 'Bacterial Meningitis', 'التهاب السحائي الجرثومي', 'A', 60),
+('A87', 'Viral Meningitis', 'التهاب السحائي الفيروسي', 'A', 60),
+('A05.0', 'Acute Food Poisoning', 'التسمم الغذائي الحاد', 'A', 60),
+('A82', 'Rabies', 'داء الكلب - السعار', 'A', 60),
+('A92.4', 'Rift Valley Fever', 'حمى الوادي المتصدع', 'A', 60),
+('A20', 'Plague', 'الطاعون', 'A', 60),
+('B50', 'Malaria (P. falciparum)', 'المالريا', 'A', 60),
+('B51', 'Malaria (P. vivax)', 'المالريا', 'A', 60),
+('B20', 'HIV / AIDS', 'الإيدز', 'A', 60),
+('U06.9', 'Zika Virus Disease', 'فيروس زيكا', 'A', 60),
+('B04', 'Mpox (Monkeypox)', 'جدري القردة', 'A', 60),
+('B05', 'Measles', 'الحصبة', 'A', 60),
+('B06', 'Rubella', 'الحصبة الألمانية', 'A', 60),
+('B26_MU', 'Mumps', 'النكاف', 'A', 60),
+('J09', 'Avian Influenza H5N1', 'إنفلونزا الطيور', 'A', 60),
+('A00.1', 'Cholera', 'الكوليرا', 'A', 60),
+('A86', 'Viral Encephalitis', 'التهاب المخ الفيروسي', 'A', 60),
+('A05.1', 'Botulism', 'التسمم المباري', 'A', 60),
+('A22', 'Anthrax', 'الجمرة الخبيثة', 'A', 60),
+('A98.0', 'Crimean-Congo Hemorrhagic Fever', 'حمى القرم', 'A', 60),
+('A92.3', 'West Nile Fever', 'حمى غرب النيل', 'A', 60),
+('A98.4', 'Ebola Virus Disease', 'الإيبولا', 'A', 60),
+('A97', 'Dengue Hemorrhagic Fever', 'حمى الدنج', 'A', 60),
+('A95', 'Yellow Fever', 'الحمى الصفراء', 'A', 60),
+('PHE.ANY', 'Any Public Health Event of Concern', 'أي حدث صحي', 'A', 60),
+
+-- GROUP B — Weekly
+('B26', 'Viral Hepatitis (A, B, C, E)', 'التهاب الكبدي الفيروسي', 'B', NULL),
+('A01.0', 'Typhoid Fever', 'التيفود', 'B', NULL),
+('A04.0', 'Bloody Diarrhea / Dysentery', 'الإسهال المدمم', 'B', NULL),
+('A23', 'Brucellosis', 'البروسيلا', 'B', NULL),
+('T01.9', 'Animal Bite', 'عقر الحيوان', 'B', NULL),
+('B74', 'Filariasis', 'الفيلاريا', 'B', NULL),
+('B01', 'Chickenpox (Varicella)', 'الجديري الكاذب', 'B', NULL),
+('J10', 'Seasonal Influenza', 'الإنفلونزا الموسمية', 'B', NULL),
+('A15', 'Tuberculosis (TB)', 'الدرن', 'B', NULL),
+('A30', 'Leprosy', 'الجذام', 'B', NULL),
+('B55', 'Leishmaniasis', 'الليشمانيا', 'B', NULL),
+('B66', 'Fascioliasis', 'الفاشيولا', 'B', NULL),
+('B65', 'Schistosomiasis (Bilharzia)', 'البلهارسيا', 'B', NULL);
