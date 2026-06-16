@@ -27,6 +27,7 @@ def upgrade() -> None:
         sa.Column("icd10_code", sa.String(10), nullable=False),
         sa.Column("name", sa.String(200), nullable=False),
         sa.Column("group_label", sa.String(1), nullable=False),
+        sa.Column("alert_minutes", sa.Integer(), nullable=True),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column(
             "created_at",
@@ -44,6 +45,7 @@ def upgrade() -> None:
     op.create_table(
         "case_reports",
         sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("report_id", sa.Uuid(), nullable=False),
         sa.Column(
             "submitted_at",
             sa.DateTime(timezone=True),
@@ -67,6 +69,7 @@ def upgrade() -> None:
         sa.Column("district", sa.String(100), nullable=True),
         sa.Column("physician_id", sa.String(64), nullable=False),
         sa.Column("icd10_code", sa.String(10), nullable=False),
+        sa.Column("disease_name", sa.String(200), nullable=False),
         sa.Column("reporting_group", sa.String(1), nullable=False),
         sa.Column("symptom_onset_date", sa.Date(), nullable=True),
         sa.Column("diagnosis_basis", sa.String(30), nullable=True),
@@ -83,6 +86,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("report_id"),
         sa.ForeignKeyConstraint(["icd10_code"], ["diseases.icd10_code"]),
         sa.CheckConstraint("sex IN ('Male', 'Female')", name="ck_reports_sex"),
         sa.CheckConstraint("reporting_group IN ('A', 'B')", name="ck_reports_group"),
@@ -173,6 +177,8 @@ def upgrade() -> None:
         sa.Column("mean_confidence", sa.Float(), nullable=True),
         sa.Column("human_confirmation_rate", sa.Float(), nullable=True),
         sa.Column("baseline_recalibrated", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column("drift_detected", sa.Boolean(), nullable=False, server_default=sa.text("false")),
+        sa.Column("admin_notified", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("notes", sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint("alert_rate_status IN ('NORMAL', 'DRIFT_DETECTED')", name="ck_drift_status"),

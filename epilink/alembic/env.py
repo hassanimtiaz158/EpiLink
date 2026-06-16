@@ -44,9 +44,10 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    configuration = config.get_section(config.config_ini_section, {})
+    # Get the URL from the main option (set from env or alembic.ini default)
+    url = config.get_main_option("sqlalchemy.url")
     connectable = async_engine_from_config(
-        configuration,
+        {"sqlalchemy.url": url},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
