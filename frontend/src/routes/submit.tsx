@@ -57,12 +57,27 @@ function SubmitReportPage() {
   const submitMutation = useMutation({
     mutationFn: (data: FormValues) =>
       reportsService.create({
-        disease: data.disease,
-        symptoms: data.symptoms.split(",").map((s) => s.trim()).filter(Boolean),
-        location: data.location,
-        facility: data.facility,
-        notes: data.notes,
-        anonymous: data.anonymous,
+        facility_id: data.facility || "FAC001",
+        physician_id: "DOC001",
+        governorate: data.location,
+        district: data.location,
+
+        // TEMPORARY FOR HACKATHON
+        icd10_code: "A80",
+
+        age_group: "15-29",
+        sex: "Male",
+        nationality: "Egyptian",
+
+        symptom_onset_date: new Date().toISOString().split("T")[0],
+
+        diagnosis_basis: "Clinical",
+
+        hospitalized: false,
+        outcome: "Alive",
+        lab_sample_taken: false,
+
+        submission_mode: "online",
       }),
     onSuccess: (r) => {
       toast.success("Report submitted", {
@@ -79,12 +94,23 @@ function SubmitReportPage() {
   const onSubmit = (data: FormValues) => {
     if (!online) {
       offlineQueue.enqueue({
-        disease: data.disease,
-        symptoms: data.symptoms.split(",").map((s) => s.trim()).filter(Boolean),
-        location: data.location,
-        facility: data.facility,
-        notes: data.notes,
-        anonymous: data.anonymous,
+        facility_id: data.facility || "FAC001",
+        physician_id: "DOC001",
+        governorate: data.location,
+        district: data.location,
+        age_group: "15-29",
+        sex: "Male",
+        nationality: "Egyptian",
+
+        icd10_code: "A80",
+
+        symptom_onset_date: new Date().toISOString().split("T")[0],
+        diagnosis_basis: "Clinical",
+
+        hospitalized: false,
+        outcome: "Alive",
+        lab_sample_taken: false,
+        submission_mode: "offline-cached",
       });
       toast.success("Saved offline", {
         description: "Will sync automatically when you reconnect.",
@@ -92,7 +118,22 @@ function SubmitReportPage() {
       reset();
       return;
     }
-    submitMutation.mutate(data);
+    submitMutation.mutate({
+      facility_id: data.facility ?? "UNKNOWN",
+      physician_id: "demo-doctor",
+      governorate: data.location,
+      district: "UNKNOWN",
+      age_group: "30-59",
+      sex: "Male",
+      nationality: "Egyptian",
+      icd10_code: "A00", // temporary
+      symptom_onset_date: new Date().toISOString(),
+      diagnosis_basis: "Clinical",
+      hospitalized: false,
+      outcome: "Unknown",
+      lab_sample_taken: false,
+      submission_mode: "online",
+    });
   };
 
   const saveOffline = () => {
@@ -103,12 +144,23 @@ function SubmitReportPage() {
       return;
     }
     offlineQueue.enqueue({
-      disease: parsed.data.disease,
-      symptoms: parsed.data.symptoms.split(",").map((s) => s.trim()).filter(Boolean),
-      location: parsed.data.location,
-      facility: parsed.data.facility,
-      notes: parsed.data.notes,
-      anonymous: parsed.data.anonymous,
+      facility_id: parsed.data.facility || "FAC001",
+      physician_id: "DOC001",
+      governorate: parsed.data.location,
+      district: parsed.data.location,
+      age_group: "15-29",
+      sex: "Male",
+      nationality: "Egyptian",
+
+      icd10_code: "A80",
+
+      symptom_onset_date: new Date().toISOString().split("T")[0],
+      diagnosis_basis: "Clinical",
+
+      hospitalized: false,
+      outcome: "Alive",
+      lab_sample_taken: false,
+      submission_mode: "offline-cached",
     });
     toast.success("Saved offline");
     reset();

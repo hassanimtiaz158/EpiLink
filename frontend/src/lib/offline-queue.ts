@@ -5,7 +5,7 @@ const KEY = "epilink:offline-reports";
 
 export interface QueuedReport {
   id: string;
-  payload: ReportInput;
+  payload: any;
   queuedAt: string;
 }
 

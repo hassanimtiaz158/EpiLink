@@ -23,45 +23,34 @@ export const MAPBOX_STYLE: string =
  * If your FastAPI exposes different paths, edit this map only.
  */
 export const ENDPOINTS = {
-  // Reports
   reports: {
-    list: "/api/reports",
-    create: "/api/reports",
-    byId: (id: string) => `/api/reports/${id}`,
+    create: "/api/v1/report",
   },
-  // AI Analysis pipeline
+
+  alerts: {
+    list: "/api/v1/alerts",
+    review: (id: string) => `/api/v1/alerts/${id}/review`,
+  },
+
+  dashboard: {
+    summary: "/api/v1/dashboard",
+  },
+
+  health: {
+    status: "/health",
+  },
+
+  // keep placeholders
   analysis: {
     run: (reportId: string) => `/api/analysis/${reportId}`,
     status: (reportId: string) => `/api/analysis/${reportId}/status`,
   },
-  // Outbreak alerts
-  alerts: {
-    list: "/api/alerts",
-    byId: (id: string) => `/api/alerts/${id}`,
-    approve: (id: string) => `/api/alerts/${id}/approve`,
-    requestData: (id: string) => `/api/alerts/${id}/request-data`,
-    dismiss: (id: string) => `/api/alerts/${id}/dismiss`,
-  },
-  // Map data
+
   map: {
     markers: "/api/map/markers",
     clusters: "/api/map/clusters",
   },
-  // Dashboard analytics
-  dashboard: {
-    summary: "/api/dashboard/summary",
-    trends: "/api/dashboard/trends",
-    weekly: "/api/dashboard/weekly",
-    alertGrowth: "/api/dashboard/alert-growth",
-  },
-  // Health/status
-  health: {
-    status: "/api/health",
-    db: "/api/health/db",
-    uptime: "/api/health/uptime",
-    lastSync: "/api/health/last-sync",
-  },
-  // Reference data
+
   reference: {
     diseases: "/api/reference/diseases",
   },

@@ -11,6 +11,7 @@ from routers.report import router as report_router
 from routers.alert import router as alert_router
 from routers.dashboard import router as dashboard_router
 from routers.sms import router as sms_router
+from routers.reference import router as reference_router
 from services.drift_monitor import scheduled_drift_check
 
 logging.basicConfig(
@@ -61,6 +62,7 @@ app.include_router(report_router)
 app.include_router(alert_router)
 app.include_router(dashboard_router)
 app.include_router(sms_router)
+app.include_router(reference_router)
 
 
 @app.exception_handler(Exception)

@@ -16,9 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { severityBadgeClass, severityLabel } from "@/lib/severity";
 import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/alerts")({
   head: () => ({
@@ -47,15 +45,15 @@ function AlertsPage() {
 
   const alerts = alertsQ.data ?? [];
   const diseases = useMemo(
-    () => Array.from(new Set(alerts.map((a) => a.disease))).sort(),
+    () => Array.from(new Set(alerts.map((a) => a.icd10_code))).sort(),
     [alerts],
   );
 
   const filtered = alerts.filter((a) => {
     if (status !== "all" && a.status !== status) return false;
-    if (disease !== "all" && a.disease !== disease) return false;
-    if (a.confidence * 100 < minConf) return false;
-    if (q && !`${a.disease} ${a.location}`.toLowerCase().includes(q.toLowerCase()))
+    if (disease !== "all" && a.icd10_code !== disease) return false;
+    if ((a.confidence ?? 0) * 100 < minConf) return false;
+    if (q && !`${a.icd10_code} ${a.governorate}`.toLowerCase().includes(q.toLowerCase()))
       return false;
     return true;
   });
@@ -81,7 +79,7 @@ function AlertsPage() {
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search disease or location"
+              placeholder="Search ICD-10 or governorate"
               className="pl-8"
             />
           </div>
@@ -92,8 +90,8 @@ function AlertsPage() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="investigating">Investigating</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="under_review">Under Review</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="dismissed">Dismissed</SelectItem>
             </SelectContent>
           </Select>
@@ -143,23 +141,30 @@ function AlertsPage() {
             <CardContent className="flex flex-wrap items-center gap-4 p-4">
               <div className="min-w-[180px] flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold">{a.disease}</span>
+                  <span className="text-base font-semibold">{a.icd10_code}</span>
                   <Badge
-                    className={cn("border text-[10px]", severityBadgeClass[a.severity])}
+                    className={`${
+                      a.alert_level === "high"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    } border text-[10px]`}
                   >
-                    {severityLabel[a.severity]}
+                    {a.alert_level || "standard"}
                   </Badge>
                   <Badge variant="outline" className="text-[10px] capitalize">
                     {a.status}
                   </Badge>
                 </div>
-                <div className="text-xs text-slate-500">{a.location}</div>
+                <div className="text-xs text-slate-500">{a.governorate}</div>
               </div>
-              <Stat label="Reports" value={String(a.reports)} />
-              <Stat label="Confidence" value={`${Math.round(a.confidence * 100)}%`} />
+              <Stat label="Confidence" value={`${Math.round((a.confidence ?? 0) * 100)}%`} />
+              <Stat
+                label="Z-Score"
+                value={(a.z_score ?? 0).toFixed(2)}
+              />
               <Stat
                 label="Created"
-                value={new Date(a.createdAt).toLocaleDateString()}
+                value={new Date(a.created_at).toLocaleDateString()}
               />
               <Button asChild size="sm" variant="outline">
                 <Link to="/review" search={{ id: a.id } as never}>
