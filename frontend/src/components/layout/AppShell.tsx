@@ -8,8 +8,10 @@ import {
   Globe2,
   HeartPulse,
   LogOut,
+  Menu,
   Sparkles,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,7 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const online = useOnline();
   const [pending, setPending] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuthContext() ?? { user: null, logout: () => {} };
 
   useEffect(() => {
@@ -63,17 +66,41 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
-      <aside className="hidden md:flex w-60 shrink-0 flex-col border-r border-border bg-card">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-border">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
-            <Activity className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-base font-semibold tracking-tight text-foreground">EpiLink</div>
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Outbreak Intelligence
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-border bg-card transition-transform duration-300 md:static md:translate-x-0",
+          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div className="flex items-center gap-2">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
+              <Activity className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="text-base font-semibold tracking-tight text-foreground">EpiLink</div>
+              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                Outbreak Intelligence
+              </div>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </div>
         <nav className="flex-1 px-2 py-3 space-y-0.5">
           {NAV.map((item) => {
@@ -83,6 +110,7 @@ export function AppShell({
               <Link
                 key={item.to}
                 to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                   active
@@ -142,7 +170,21 @@ export function AppShell({
           )}
         </div>
       </aside>
-      <main className={cn("flex-1 min-w-0", fullBleed ? "" : "p-6 md:p-8")}>{children}</main>
+      <main className="flex min-w-0 flex-1 flex-col">
+        {/* Mobile Header */}
+        <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4 md:hidden">
+          <div className="flex items-center gap-2">
+            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
+              <Activity className="h-4 w-4" />
+            </div>
+            <span className="font-semibold tracking-tight text-foreground">EpiLink</span>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+        <div className={cn("flex-1", fullBleed ? "" : "p-6 md:p-8")}>{children}</div>
+      </main>
     </div>
   );
 }

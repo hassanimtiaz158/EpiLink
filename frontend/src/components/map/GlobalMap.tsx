@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import type { MapMarker } from "@/lib/api/types";
 import { severityColor } from "@/lib/severity";
 import { MAPBOX_TOKEN, MAPBOX_STYLE } from "@/lib/api/config";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import HeatmapLayer from "./HeatMapLayer";
+
 
 interface Props {
   markers: MapMarker[];
@@ -24,6 +26,18 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     chunkedLoading?: boolean;
   }> | null>(null);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
+  const [userPos, setUserPos] = useState<[number, number] | null>(null);
+
+
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && "geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
+        (err) => console.warn("Geolocation error:", err)
+      );
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -47,7 +61,7 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     );
   }
 
-  const { MapContainer, TileLayer, Marker, Popup, ZoomControl } = mod;
+  const { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker } = mod;
 
   const tileUrl = MAPBOX_TOKEN
     ? `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`
@@ -55,6 +69,23 @@ export default function GlobalMap({ markers, onSelect }: Props) {
   const attribution = MAPBOX_TOKEN
     ? '&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+  const heatPoints = useMemo(
+  () =>
+    markers.map((m) => ({
+      lat: m.lat,
+      lng: m.lng,
+      intensity:
+        m.severity === "critical"
+          ? m.reports
+          : m.severity === "high"
+          ? m.reports * 0.8
+          : m.severity === "moderate"
+          ? m.reports * 0.5
+          : m.reports * 0.2,
+    })),
+  [markers]
+);
 
   const makeIcon = (sev: MapMarker["severity"], reports: number) => {
     const color = severityColor[sev];
@@ -80,6 +111,7 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     >
       <TileLayer url={tileUrl} attribution={attribution} />
       <ZoomControl position="bottomright" />
+      <HeatmapLayer points={heatPoints} />
       <Cluster chunkedLoading>
         {markers.map((m) => (
           <Marker
@@ -101,6 +133,15 @@ export default function GlobalMap({ markers, onSelect }: Props) {
           </Marker>
         ))}
       </Cluster>
+      {userPos && (
+        <CircleMarker
+          center={userPos}
+          radius={8}
+          pathOptions={{ color: "#3b82f6", fillColor: "#3b82f6", fillOpacity: 0.8 }}
+        >
+          <Popup>Your Location</Popup>
+        </CircleMarker>
+      )}
     </MapContainer>
   );
 }

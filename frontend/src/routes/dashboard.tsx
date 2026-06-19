@@ -24,6 +24,36 @@ const LEVEL_BADGES: Record<string, string> = {
   NORMAL: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
 
+const GOVERNORATE_COORDS: Record<string, [number, number]> = {
+  "Cairo": [30.0444, 31.2357],
+  "Alexandria": [31.2001, 29.9187],
+  "Giza": [30.0131, 31.2089],
+  "Qalyubia": [30.4069, 31.1846],
+  "Port Said": [31.2565, 32.2841],
+  "Suez": [29.9668, 32.5498],
+  "Luxor": [25.6872, 32.6396],
+  "Aswan": [24.0889, 32.8998],
+  "Asyut": [27.1810, 31.1837],
+  "Beheira": [31.0371, 30.4398],
+  "Beni Suef": [29.0661, 31.0994],
+  "Dakahlia": [31.0364, 31.3807],
+  "Damietta": [31.4165, 31.8133],
+  "Faiyum": [29.3084, 30.8428],
+  "Gharbia": [30.8754, 31.0113],
+  "Ismailia": [30.6043, 32.2723],
+  "Kafr El Sheikh": [31.1107, 30.9388],
+  "Matrouh": [31.3543, 27.2373],
+  "Minya": [28.0871, 30.7342],
+  "Monufia": [30.5972, 30.9876],
+  "New Valley": [25.4390, 30.5586],
+  "North Sinai": [30.2824, 33.6823],
+  "Qena": [26.1551, 32.7160],
+  "Red Sea": [26.7500, 33.9360],
+  "Sharqia": [30.7327, 31.7195],
+  "Sohag": [26.5570, 31.6948],
+  "South Sinai": [28.2364, 33.6254],
+};
+
 export const Route = createFileRoute("/dashboard")({
   beforeLoad: () => {
     const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
@@ -62,6 +92,31 @@ function DashboardPage() {
     );
   }, [rawAlerts, q]);
 
+  const markers = useMemo(() => {
+    return filtered.map((a, index) => {
+      const coords = GOVERNORATE_COORDS[a.governorate] || GOVERNORATE_COORDS["Cairo"];
+
+      const offset = (index % 10) * 0.01;
+
+      const lat = coords[0] + offset;
+      const lng = coords[1] - offset;
+
+      let severity: "low" | "moderate" | "high" | "critical" = "moderate";
+      if (a.alert_level === "HIGH") severity = "critical";
+      if (a.alert_level === "NORMAL") severity = "low";
+
+      return {
+        id: a.id,
+        disease: a.icd10_code,
+        severity,
+        lat,
+        lng,
+        reports: 1,
+        location: a.governorate,
+      };
+    });
+  }, [filtered]);
+
   return (
     <AppShell>
       <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -79,8 +134,8 @@ function DashboardPage() {
 
         <div className="flex flex-1 gap-4 overflow-hidden">
           {/* Map */}
-          <div className="flex-1 overflow-hidden rounded-xl border">
-            <GlobalMap markers={[]} />
+          <div className="flex-1 overflow-hidden rounded-xl border relative z-0">
+            <GlobalMap markers={markers} />
           </div>
 
           {/* Sidebar alerts */}
