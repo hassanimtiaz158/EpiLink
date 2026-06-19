@@ -9,7 +9,10 @@ export interface GeoPoint {
 export interface Disease {
   id: string;
   name: string;
-  icd10?: string;
+  icd10_code: string;
+  group_label: string;
+  alert_minutes: number;
+  description: string | null;
 }
 
 // Backend-compatible AlertOut (GET /api/v1/alerts)

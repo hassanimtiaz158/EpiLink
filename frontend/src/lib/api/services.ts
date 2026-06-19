@@ -9,7 +9,6 @@ import type {
   Disease,
   HealthStatus,
   MapMarker,
-  Report,
   ReportInput,
   TrendPoint,
   InputResponse,
@@ -74,6 +73,9 @@ export const analysisService = {
 
 // ---------- Alerts ----------
 export const alertsService = {
+  /**
+   * List alerts. Backend returns: { total: int, alerts: AlertOut[] }
+   */
   list: (params?: {
     governorate?: string;
     status?: string;
@@ -94,6 +96,8 @@ export const alertsService = {
 };
 
 // ---------- Map ----------
+// NOTE: mapService.markers endpoint is NOT implemented by the backend yet.
+// Keep code intact; the query is disabled at the call site with a safe fallback.
 export const mapService = {
   markers: (params?: { disease?: string; severity?: string }) =>
     apiFetch<MapMarker[]>(ENDPOINTS.map.markers, { query: params }),
@@ -106,7 +110,13 @@ export const dashboardService = {
 
 // ---------- Health ----------
 export const healthService = {
-  status: () => apiFetch<HealthStatus>(ENDPOINTS.health.status),
+  status: () =>
+    apiFetch<{
+      status: string;
+      version: string;
+      database: string;
+      timestamp: string;
+    }>(ENDPOINTS.health.status),
 };
 
 // ---------- Reference ----------
