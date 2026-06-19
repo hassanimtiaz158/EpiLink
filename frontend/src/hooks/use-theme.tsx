@@ -20,11 +20,10 @@ const SSR_SAFE_CONTEXT: ThemeContextType = {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const stored = localStorage.getItem("epilink:theme") as Theme | null;
+
     if (stored) {
       setThemeState(stored);
     } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -33,12 +32,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
-    const root = window.document.documentElement;
+    const root = document.documentElement;
+
     root.classList.remove("light", "dark");
     root.classList.add(theme);
+
     localStorage.setItem("epilink:theme", theme);
-  }, [theme, mounted]);
+  }, [theme]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
@@ -47,10 +47,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const toggleTheme = () => {
     setThemeState((prev) => (prev === "light" ? "dark" : "light"));
   };
-
-  if (!mounted) {
-    return <>{children}</>;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
@@ -61,9 +57,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
+
   if (context === undefined) {
     if (typeof window === "undefined") return SSR_SAFE_CONTEXT;
+
     throw new Error("useTheme must be used within a ThemeProvider");
   }
+
   return context;
 }
