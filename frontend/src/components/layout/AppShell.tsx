@@ -11,6 +11,7 @@ import {
   Menu,
   Sparkles,
   WifiOff,
+  Menu,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -48,7 +49,12 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const online = useOnline();
   const [pending, setPending] = useState(0);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change on mobile
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
   const { user, logout } = useAuthContext() ?? { user: null, logout: () => {} };
 
   useEffect(() => {
@@ -57,6 +63,14 @@ export function AppShell({
     window.addEventListener("epilink:queue-changed", sync);
     return () => window.removeEventListener("epilink:queue-changed", sync);
   }, []);
+  
+  useEffect(() => {
+  document.body.style.overflow = sidebarOpen ? "hidden" : "";
+  return () => {
+    document.body.style.overflow = "";
+  };
+}, [sidebarOpen]);
+
 
   useEffect(() => {
     if (online && pending > 0) {
@@ -65,44 +79,58 @@ export function AppShell({
   }, [online, pending]);
 
   return (
-    <div className="flex min-h-screen w-full bg-background text-foreground">
-      {/* Mobile overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+    <div className="flex min-h-screen w-full flex-col md:flex-row bg-background text-foreground">
+             {/* Mobile Header */}
+<div className="sticky top-0 z-40 flex items-center justify-between border-b bg-card p-4 md:hidden shrink-0">
+  <div className="flex items-center gap-2">
+    <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
+      <Activity className="h-4 w-4" />
+    </div>
+    <span className="font-semibold">EpiLink</span>
+  </div>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-60 shrink-0 flex-col border-r border-border bg-card transition-transform duration-300 md:static md:translate-x-0",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
+  <button
+  onClick={() => setSidebarOpen((prev) => !prev)}
+  className="rounded-md p-2 hover:bg-muted transition-colors"
+    aria-label="Open menu"
+>
+    <Menu className="h-6 w-6" />
+  </button>
+</div>
+       {sidebarOpen && (
+  <div
+    className="fixed inset-0 z-[9998] bg-black/40 md:hidden"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
+     
+     <aside
+  className={cn(
+    "fixed inset-y-0 left-0 z-[9999] w-60 overflow-y-auto flex flex-col border-r border-border bg-card transform transition-transform duration-200 ease-in-out will-change-transform md:static md:translate-x-0 md:flex",
+    sidebarOpen ? "translate-x-0" : "-translate-x-full"
+)}
+>
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
-              <Activity className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-base font-semibold tracking-tight text-foreground">EpiLink</div>
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                Outbreak Intelligence
-              </div>
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
+            <Activity className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-base font-semibold tracking-tight text-foreground">EpiLink</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Outbreak Intelligence
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          <button
+  onClick={() => setSidebarOpen(false)}
+  className="rounded-md p-2 hover:bg-muted md:hidden transition-colors"
+            aria-label="Close menu"
+>
+  <X className="h-5 w-5" />
+</button>
         </div>
-        <nav className="flex-1 px-2 py-3 space-y-0.5">
+       
+   
+        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
@@ -170,21 +198,12 @@ export function AppShell({
           )}
         </div>
       </aside>
-      <main className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile Header */}
-        <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4 md:hidden">
-          <div className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
-              <Activity className="h-4 w-4" />
-            </div>
-            <span className="font-semibold tracking-tight text-foreground">EpiLink</span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className={cn("flex-1", fullBleed ? "" : "p-6 md:p-8")}>{children}</div>
-      </main>
+      <main
+  className={cn(
+    "flex-1 min-w-0 overflow-x-hidden",
+    fullBleed ? "" : "p-6 md:p-8"
+  )}
+>{children}</main>
     </div>
   );
 }
