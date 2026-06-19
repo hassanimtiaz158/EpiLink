@@ -6,7 +6,6 @@ import { AppShell } from "@/components/layout/AppShell";
 import GlobalMap from "@/components/map/GlobalMap";
 import { mapService, alertsService, referenceService } from "@/lib/api/services";
 import { QUERY_KEYS } from "@/lib/api/config";
-import { severityBadgeClass, severityLabel } from "@/lib/severity";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
@@ -30,11 +29,15 @@ function GlobalMapPage() {
   const [disease, setDisease] = useState<string | null>(null);
   const [q, setQ] = useState("");
 
+  // NOTE: map markers endpoint not yet implemented by backend.
+  // Query is disabled to prevent console errors; markers will be empty array.
   const markersQ = useQuery({
     queryKey: [...QUERY_KEYS.mapMarkers, disease],
     queryFn: () => mapService.markers(disease ? { disease } : undefined),
+    enabled: false, // TODO: re-enable when backend implements /api/map/markers
     refetchInterval: 60_000,
   });
+
   const alertsQ = useQuery({
     queryKey: [...QUERY_KEYS.alerts, "recent"],
     queryFn: () => alertsService.list(),
@@ -46,7 +49,7 @@ function GlobalMapPage() {
   });
 
   const markers = markersQ.data ?? [];
-  const alerts = alertsQ.data ?? [];
+  const alerts = alertsQ.data?.alerts ?? [];
 
   const counts = useMemo(() => {
     const c = { critical: 0, high: 0, moderate: 0, low: 0 };
@@ -55,7 +58,11 @@ function GlobalMapPage() {
   }, [markers]);
 
   const filteredAlerts = alerts.filter((a) =>
-    q ? `${a.disease} ${a.location}`.toLowerCase().includes(q.toLowerCase()) : true,
+    q
+      ? `${a.icd10_code} ${a.governorate}`
+          .toLowerCase()
+          .includes(q.toLowerCase())
+      : true,
   );
 
   const chips = (diseasesQ.data ?? []).slice(0, 8);
@@ -170,25 +177,24 @@ function GlobalMapPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{a.disease}</div>
+                      <div className="truncate text-sm font-medium">{a.icd10_code}</div>
                       <div className="truncate text-xs text-slate-500">
-                        {a.location}
+                        {a.governorate}
                       </div>
                     </div>
                     <Badge
                       className={cn(
-                        "shrink-0 border text-[10px]",
-                        severityBadgeClass[a.severity],
+                        "shrink-0 border text-[10px] bg-slate-100 text-slate-700 border-slate-200",
                       )}
                     >
-                      {severityLabel[a.severity]}
+                      {a.alert_level ?? "standard"}
                     </Badge>
                   </div>
                   <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-500">
                     <span className="flex items-center gap-1">
-                      <Layers className="h-3 w-3" /> {a.reports} reports
+                      <Layers className="h-3 w-3" /> {a.status}
                     </span>
-                    <span>{Math.round(a.confidence * 100)}% conf.</span>
+                    <span>{Math.round((a.confidence ?? 0) * 100)}% conf.</span>
                   </div>
                 </li>
               ))}

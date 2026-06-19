@@ -49,31 +49,37 @@ function HealthPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatusCard
             label="API"
-            status={q.data.api}
+            status={q.data.status === "ok" ? "ok" : "down"}
             icon={<Server className="h-4 w-4" />}
           />
           <StatusCard
             label="Database"
-            status={q.data.database}
+            status={
+              q.data.database === "connected"
+                ? "ok"
+                : q.data.database === "disconnected"
+                ? "down"
+                : "degraded"
+            }
             icon={<Database className="h-4 w-4" />}
           />
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
-                <CheckCircle2 className="h-4 w-4" /> Uptime
+                <CheckCircle2 className="h-4 w-4" /> Version
               </div>
               <div className="mt-1 text-2xl font-semibold tabular-nums">
-                {formatUptime(q.data.uptimeSeconds)}
+                {q.data.version}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-slate-500">
-                <RefreshCw className="h-4 w-4" /> Last Sync
+                <RefreshCw className="h-4 w-4" /> Last Check
               </div>
               <div className="mt-1 text-lg font-semibold">
-                {new Date(q.data.lastSync).toLocaleString()}
+                {new Date(q.data.timestamp).toLocaleString()}
               </div>
             </CardContent>
           </Card>
@@ -112,9 +118,6 @@ function StatusCard({
   );
 }
 
-function formatUptime(s: number) {
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return `${d}d ${h}h ${m}m`;
+function formatUptime(_s: number) {
+  return "—";
 }

@@ -16,6 +16,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ReportInput } from "@/lib/api/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const Route = createFileRoute("/submit")({
   head: () => ({
@@ -55,36 +63,15 @@ function SubmitReportPage() {
     });
 
   const submitMutation = useMutation({
-    mutationFn: (data: FormValues) =>
-      reportsService.create({
-        facility_id: data.facility || "FAC001",
-        physician_id: "DOC001",
-        governorate: data.location,
-        district: data.location,
+    mutationFn: (payload: ReportInput) => reportsService.create(payload),
 
-        // TEMPORARY FOR HACKATHON
-        icd10_code: "A80",
-
-        age_group: "15-29",
-        sex: "Male",
-        nationality: "Egyptian",
-
-        symptom_onset_date: new Date().toISOString().split("T")[0],
-
-        diagnosis_basis: "Clinical",
-
-        hospitalized: false,
-        outcome: "Alive",
-        lab_sample_taken: false,
-
-        submission_mode: "online",
-      }),
     onSuccess: (r) => {
       toast.success("Report submitted", {
         description: "Analysis pipeline started.",
       });
       reset();
-      navigate({ to: "/analysis", search: { id: r.id } as never });
+      // Backend returns { report_id, status, reporting_group, alert_triggered, message }
+      navigate({ to: "/analysis", search: { id: r.report_id } as never });
     },
     onError: (e) => {
       toast.error("Submission failed", { description: (e as Error).message });
@@ -118,6 +105,37 @@ function SubmitReportPage() {
       reset();
       return;
     }
+
+    console.log("The disease data is ", diseasesQ.data)
+
+    const selectedDisease = diseasesQ.data?.find(
+      (d) => d.name === data.disease
+    );
+
+    if (!selectedDisease) {
+      toast.error("Please select a valid disease");
+      return;
+    }
+
+    console.log({
+      facility_id: data.facility || "FAC001",
+      physician_id: "DOC001",
+      governorate: data.location,
+      district: data.location,
+      age_group: "15-29",
+      sex: "Male",
+      nationality: "Egyptian",
+      icd10_code: selectedDisease.icd10_code,
+      symptom_onset_date: new Date().toISOString().split("T")[0],
+      diagnosis_basis: "Clinical",
+      hospitalized: false,
+      outcome: "Alive",
+      lab_sample_taken: false,
+      submission_mode: "online",
+    });
+
+
+
     submitMutation.mutate({
       facility_id: data.facility ?? "UNKNOWN",
       physician_id: "demo-doctor",
@@ -126,8 +144,8 @@ function SubmitReportPage() {
       age_group: "30-59",
       sex: "Male",
       nationality: "Egyptian",
-      icd10_code: "A00", // temporary
-      symptom_onset_date: new Date().toISOString(),
+      icd10_code: selectedDisease.icd10_code,
+      symptom_onset_date: new Date().toISOString().split("T")[0],
       diagnosis_basis: "Clinical",
       hospitalized: false,
       outcome: "Unknown",
@@ -137,12 +155,23 @@ function SubmitReportPage() {
   };
 
   const saveOffline = () => {
+    // Declare data first to avoid ReferenceError
     const data = watch();
     const parsed = schema.safeParse(data);
     if (!parsed.success) {
       toast.error("Fill in required fields first");
       return;
     }
+
+    const selectedDisease = diseasesQ.data?.find(
+      (d) => d.name === parsed.data.disease
+    );
+
+    if (!selectedDisease) {
+      toast.error("Please select a valid disease");
+      return;
+    }
+
     offlineQueue.enqueue({
       facility_id: parsed.data.facility || "FAC001",
       physician_id: "DOC001",
@@ -151,12 +180,9 @@ function SubmitReportPage() {
       age_group: "15-29",
       sex: "Male",
       nationality: "Egyptian",
-
-      icd10_code: "A80",
-
+      icd10_code: selectedDisease.icd10_code,
       symptom_onset_date: new Date().toISOString().split("T")[0],
       diagnosis_basis: "Clinical",
-
       hospitalized: false,
       outcome: "Alive",
       lab_sample_taken: false,
@@ -193,18 +219,27 @@ function SubmitReportPage() {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-5">
               <div className="grid gap-1.5">
-                <Label htmlFor="disease">Disease</Label>
-                <Input
-                  id="disease"
-                  list="disease-list"
-                  placeholder="e.g. Cholera, Measles"
-                  {...register("disease")}
-                />
-                <datalist id="disease-list">
-                  {(diseasesQ.data ?? []).map((d) => (
-                    <option key={d.id} value={d.name} />
-                  ))}
-                </datalist>
+                <Label>Disease</Label>
+
+                <Select
+                  value={watch("disease")}
+                  onValueChange={(value) =>
+                    setValue("disease", value, { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a disease" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {(diseasesQ.data ?? []).map((d) => (
+                      <SelectItem key={d.id} value={d.name}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 {formState.errors.disease && (
                   <p className="text-xs text-red-600">
                     {formState.errors.disease.message}

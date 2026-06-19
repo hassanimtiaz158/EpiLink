@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { alertLevelBadgeClass } from "@/lib/severity";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, Search } from "lucide-react";
@@ -43,7 +44,7 @@ function AlertsPage() {
     queryFn: () => alertsService.list(),
   });
 
-  const alerts = alertsQ.data ?? [];
+  const alerts = alertsQ.data?.alerts ?? [];
   const diseases = useMemo(
     () => Array.from(new Set(alerts.map((a) => a.icd10_code))).sort(),
     [alerts],
@@ -143,11 +144,7 @@ function AlertsPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold">{a.icd10_code}</span>
                   <Badge
-                    className={`${
-                      a.alert_level === "high"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                    } border text-[10px]`}
+                    className={`${alertLevelBadgeClass(a.alert_level)} border text-[10px]`}
                   >
                     {a.alert_level || "standard"}
                   </Badge>

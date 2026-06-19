@@ -9,7 +9,10 @@ export interface GeoPoint {
 export interface Disease {
   id: string;
   name: string;
-  icd10?: string;
+  icd10_code: string;
+  group_label: string;
+  alert_minutes: number;
+  description: string | null;
 }
 
 export interface Report {
@@ -58,7 +61,7 @@ export interface Alert {
   governorate: string;
   alert_level?: string;
   z_score?: number;
-  confidence: number;
+  confidence?: number;
   status: string;
   dispatched_at?: string;
   dispatch_targets?: Record<string, unknown>;
@@ -67,6 +70,17 @@ export interface Alert {
   review_decision?: string;
   review_notes?: string;
   created_at: string;
+}
+
+export interface AlertListResponse {
+  total: number;
+  alerts: Alert[];
+}
+
+export interface ReviewResponse {
+  alert_id: string;
+  status: string;
+  reviewed_at: string;
 }
 
 export interface AnalysisResult {
@@ -128,8 +142,10 @@ export interface TrendPoint {
 }
 
 export interface HealthStatus {
-  api: "ok" | "degraded" | "down";
-  database: "ok" | "degraded" | "down";
-  uptimeSeconds: number;
-  lastSync: string;
+  /** Backend field: "ok" when running */
+  status: string;
+  version: string;
+  /** Backend returns "connected" | "disconnected" */
+  database: string;
+  timestamp: string;
 }
