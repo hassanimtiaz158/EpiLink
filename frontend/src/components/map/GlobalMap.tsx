@@ -55,6 +55,23 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     })();
   }, []);
 
+  const heatPoints = useMemo(
+    () =>
+      markers.map((m) => ({
+        lat: m.lat,
+        lng: m.lng,
+        intensity:
+          m.severity === "critical"
+            ? m.reports
+            : m.severity === "high"
+              ? m.reports * 0.8
+              : m.severity === "moderate"
+                ? m.reports * 0.5
+                : m.reports * 0.2,
+      })),
+    [markers]
+  );
+
   if (!mounted || !mod || !L || !Cluster) {
     return (
       <div className="h-full w-full animate-pulse bg-gradient-to-br from-slate-100 to-slate-200" />
@@ -70,22 +87,6 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     ? '&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
     : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
-  const heatPoints = useMemo(
-  () =>
-    markers.map((m) => ({
-      lat: m.lat,
-      lng: m.lng,
-      intensity:
-        m.severity === "critical"
-          ? m.reports
-          : m.severity === "high"
-          ? m.reports * 0.8
-          : m.severity === "moderate"
-          ? m.reports * 0.5
-          : m.reports * 0.2,
-    })),
-  [markers]
-);
 
   const makeIcon = (sev: MapMarker["severity"], reports: number) => {
     const color = severityColor[sev];
