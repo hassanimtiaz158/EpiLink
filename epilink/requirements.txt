@@ -15,3 +15,9 @@ pytest-asyncio==0.23.2
 pytest-httpx==0.28.0
 aiosqlite==0.19.0
 python-multipart==0.0.6
+pillow==10.4.0
+pytesseract==0.3.10
+openai==1.37.0
+python-magic==0.4.27
+pyjwt==2.8.0
+bcrypt==4.1.3

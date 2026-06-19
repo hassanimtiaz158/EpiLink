@@ -12,11 +12,17 @@ class Settings(BaseSettings):
     twilio_phone_number: str = ""
     secret_key: str = "change-me-in-production"
     environment: str = "development"
+    groq_api_key: str = ""
+    cors_origins: str = "*"
 
     class Config:
         env_file = ".env"
         case_sensitive = False
         populate_by_name = True
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 settings = Settings()

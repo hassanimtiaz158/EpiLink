@@ -1,34 +1,42 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, BarChart3, FileText, Layers } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { AlertTriangle, Globe2, Radio, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
-import { dashboardService } from "@/lib/api/services";
-import { QUERY_KEYS } from "@/lib/api/config";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LoadingState, ErrorState, EmptyState } from "@/components/feedback";
+import GlobalMap from "@/components/map/GlobalMap";
+import { ENDPOINTS } from "@/lib/api/config";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
+import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api/client";
+import type { Alert, AlertListResponse } from "@/lib/api/types";
+
+const LEVEL_COLORS: Record<string, string> = {
+  HIGH: "bg-red-500",
+  REVIEW: "bg-amber-400",
+  NORMAL: "bg-emerald-500",
+};
+
+const LEVEL_BADGES: Record<string, string> = {
+  HIGH: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+  REVIEW: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  NORMAL: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+};
 
 export const Route = createFileRoute("/dashboard")({
+  beforeLoad: () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
+    if (!token) {
+      throw redirect({ to: "/" });
+    }
+  },
   head: () => ({
     meta: [
-      { title: "Dashboard — EpiLink" },
+      { title: "Dashboard - EpiLink" },
       {
         name: "description",
-        content:
-          "Surveillance dashboard: total reports, active alerts, clusters, and disease trends.",
+        content: "Live map of disease outbreak signals from clinician reports.",
       },
     ],
   }),
@@ -36,202 +44,93 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const summaryQ = useQuery({
-    queryKey: QUERY_KEYS.dashboardSummary,
-    queryFn: dashboardService.summary,
+  const [q, setQ] = useState("");
+
+  const alertsQ = useQuery({
+    queryKey: ["alerts"],
+    queryFn: () => apiFetch<AlertListResponse>(ENDPOINTS.alerts.list),
   });
-  const trendsQ = useQuery({
-    queryKey: QUERY_KEYS.dashboardTrends,
-    queryFn: dashboardService.trends,
-  });
-  const weeklyQ = useQuery({
-    queryKey: QUERY_KEYS.dashboardWeekly,
-    queryFn: dashboardService.weekly,
-  });
-  const growthQ = useQuery({
-    queryKey: QUERY_KEYS.dashboardAlertGrowth,
-    queryFn: dashboardService.alertGrowth,
-  });
+
+  const rawAlerts: Alert[] = alertsQ.data?.alerts ?? [];
+
+  const filtered = useMemo(() => {
+    if (!q) return rawAlerts;
+    const lower = q.toLowerCase();
+    return rawAlerts.filter(
+      (a) =>
+        a.icd10_code.toLowerCase().includes(lower) || a.governorate.toLowerCase().includes(lower),
+    );
+  }, [rawAlerts, q]);
 
   return (
     <AppShell>
-      <header className="mb-6 flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-lg bg-slate-900 text-white">
-          <BarChart3 className="h-5 w-5" />
+      <div className="flex h-[calc(100vh-4rem)] flex-col">
+        <header className="mb-4 flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+            <Globe2 className="h-5 w-5" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Global Outbreak Map</h1>
+            <p className="text-sm text-muted-foreground">
+              Live signals from clinician reports across Egypt.
+            </p>
+          </div>
+        </header>
+
+        <div className="flex flex-1 gap-4 overflow-hidden">
+          {/* Map */}
+          <div className="flex-1 overflow-hidden rounded-xl border">
+            <GlobalMap markers={[]} />
+          </div>
+
+          {/* Sidebar alerts */}
+          <div className="hidden w-80 flex-col overflow-hidden xl:flex">
+            <div className="mb-3 flex items-center gap-2">
+              <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+              <span className="text-sm font-medium">Live Alerts</span>
+              <Badge variant="secondary" className="ml-auto text-[10px]">
+                {rawAlerts.length}
+              </Badge>
+            </div>
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search..."
+                className="h-8 pl-7 text-xs"
+              />
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto">
+              {alertsQ.isLoading && <LoadingState />}
+              {alertsQ.isError && <ErrorState error={alertsQ.error} />}
+              {!alertsQ.isLoading && filtered.length === 0 && (
+                <EmptyState title="No alerts" icon={<AlertTriangle className="h-5 w-5" />} />
+              )}
+              {filtered.map((a) => (
+                <div key={a.id} className="rounded-lg border p-3 transition hover:shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">{a.icd10_code}</span>
+                    <Badge
+                      className={cn(
+                        "border px-1.5 py-0 text-[9px]",
+                        LEVEL_BADGES[a.alert_level] ?? "",
+                      )}
+                    >
+                      {a.alert_level}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">{a.governorate}</div>
+                  <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+                    <span>{new Date(a.created_at).toLocaleDateString()}</span>
+                    {a.confidence != null && <span>{Math.round(a.confidence * 100)}%</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-sm text-slate-500">
-            Global surveillance at a glance.
-          </p>
-        </div>
-      </header>
-
-      <section className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          label="Total Reports"
-          value={summaryQ.data?.totalReports}
-          loading={summaryQ.isLoading}
-          icon={<FileText className="h-4 w-4" />}
-          accent="bg-sky-100 text-sky-700"
-        />
-        <Kpi
-          label="Active Alerts"
-          value={summaryQ.data?.activeAlerts}
-          loading={summaryQ.isLoading}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          accent="bg-red-100 text-red-700"
-        />
-        <Kpi
-          label="Pending Reviews"
-          value={summaryQ.data?.pendingReviews}
-          loading={summaryQ.isLoading}
-          icon={<Layers className="h-4 w-4" />}
-          accent="bg-amber-100 text-amber-700"
-        />
-        <Kpi
-          label="Active Clusters"
-          value={summaryQ.data?.activeClusters}
-          loading={summaryQ.isLoading}
-          icon={<BarChart3 className="h-4 w-4" />}
-          accent="bg-indigo-100 text-indigo-700"
-        />
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard title="Disease Trends" query={trendsQ}>
-          {(data) => (
-            <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Legend />
-                {seriesKeys(data).map((k, i) => (
-                  <Line
-                    key={k}
-                    type="monotone"
-                    dataKey={k}
-                    stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        <ChartCard title="Weekly Reports" query={weeklyQ}>
-          {(data) => (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Bar dataKey="reports" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
-
-        <ChartCard title="Alert Growth" query={growthQ} className="lg:col-span-2">
-          {(data) => (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={data}>
-                <defs>
-                  <linearGradient id="alertGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="alerts"
-                  stroke="#ef4444"
-                  fill="url(#alertGrad)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </ChartCard>
       </div>
     </AppShell>
-  );
-}
-
-const SERIES_COLORS = ["#0ea5e9", "#6366f1", "#10b981", "#f59e0b", "#ef4444"];
-
-function seriesKeys(data: Array<Record<string, unknown>>) {
-  if (!data?.length) return [];
-  return Object.keys(data[0]).filter((k) => k !== "date");
-}
-
-function Kpi({
-  label,
-  value,
-  loading,
-  icon,
-  accent,
-}: {
-  label: string;
-  value?: number;
-  loading: boolean;
-  icon: React.ReactNode;
-  accent: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <div className={`grid h-10 w-10 place-items-center rounded-lg ${accent}`}>
-          {icon}
-        </div>
-        <div>
-          <div className="text-xs uppercase tracking-wider text-slate-500">
-            {label}
-          </div>
-          <div className="text-2xl font-semibold tabular-nums">
-            {loading ? "—" : (value ?? 0).toLocaleString()}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ChartCard<T>({
-  title,
-  query,
-  className,
-  children,
-}: {
-  title: string;
-  query: { data?: T[]; isLoading: boolean; isError: boolean; error: unknown; refetch: () => void };
-  className?: string;
-  children: (data: T[]) => React.ReactNode;
-}) {
-  return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {query.isLoading && <LoadingState />}
-        {query.isError && (
-          <ErrorState error={query.error} onRetry={query.refetch} />
-        )}
-        {!query.isLoading && !query.isError && (!query.data || query.data.length === 0) && (
-          <EmptyState title="No data yet" />
-        )}
-        {query.data && query.data.length > 0 && children(query.data)}
-      </CardContent>
-    </Card>
   );
 }

@@ -2,20 +2,30 @@ import { apiFetch } from "./client";
 import { ENDPOINTS } from "./config";
 import type {
   Alert,
+  AlertListResponse,
   AnalysisResult,
-  DashboardSummary,
+  AnalysisOutput,
+  DashboardData,
   Disease,
   HealthStatus,
   MapMarker,
   Report,
   ReportInput,
   TrendPoint,
+  InputResponse,
+  TextInputRequest,
+  FormInputRequest,
+  ImageInputRequest,
+  OCRTextInputRequest,
+  TokenResponse,
+  SignupRequest,
+  LoginRequest,
+  UserOut,
 } from "./types";
 
 // ---------- Reports ----------
 export const reportsService = {
   list: () => apiFetch<Report[]>(ENDPOINTS.reports.list),
-  // TODO: confirm FastAPI response shape (returns created Report).
   create: (input: ReportInput) =>
     apiFetch<Report>(ENDPOINTS.reports.create, {
       method: "POST",
@@ -24,32 +34,64 @@ export const reportsService = {
   get: (id: string) => apiFetch<Report>(ENDPOINTS.reports.byId(id)),
 };
 
+// ---------- Input Processing (New Unified Endpoints) ----------
+export const inputService = {
+  text: (request: TextInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.text, {
+      method: "POST",
+      body: request,
+    }),
+  form: (request: FormInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.form, {
+      method: "POST",
+      body: request,
+    }),
+  image: (request: ImageInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.image, {
+      method: "POST",
+      body: request,
+    }),
+  ocrText: (request: OCRTextInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.ocrText, {
+      method: "POST",
+      body: request,
+    }),
+  health: () => apiFetch<HealthStatus>(ENDPOINTS.input.health),
+};
+
 // ---------- Analysis ----------
 export const analysisService = {
-  // TODO: confirm whether analysis is sync or async (polling vs WebSocket).
+  analyze: (text: string) =>
+    apiFetch<AnalysisOutput>(ENDPOINTS.analysis.analyze, {
+      method: "POST",
+      body: { text, source: "manual" },
+    }),
   run: (reportId: string) =>
     apiFetch<AnalysisResult>(ENDPOINTS.analysis.run(reportId), {
       method: "POST",
     }),
-  status: (reportId: string) =>
-    apiFetch<AnalysisResult>(ENDPOINTS.analysis.status(reportId)),
+  status: (reportId: string) => apiFetch<AnalysisResult>(ENDPOINTS.analysis.status(reportId)),
 };
 
 // ---------- Alerts ----------
 export const alertsService = {
   list: (params?: {
-    q?: string;
+    governorate?: string;
     status?: string;
-    disease?: string;
-    minConfidence?: number;
-  }) => apiFetch<Alert[]>(ENDPOINTS.alerts.list, { query: params }),
+    icd10_code?: string;
+    alert_level?: string;
+    limit?: number;
+    offset?: number;
+  }) => apiFetch<AlertListResponse>(ENDPOINTS.alerts.list, { query: params }),
   get: (id: string) => apiFetch<Alert>(ENDPOINTS.alerts.byId(id)),
-  approve: (id: string) =>
-    apiFetch<Alert>(ENDPOINTS.alerts.approve(id), { method: "POST" }),
-  requestData: (id: string) =>
-    apiFetch<Alert>(ENDPOINTS.alerts.requestData(id), { method: "POST" }),
-  dismiss: (id: string) =>
-    apiFetch<Alert>(ENDPOINTS.alerts.dismiss(id), { method: "POST" }),
+  review: (id: string, decision: "confirmed" | "dismissed", reviewedBy: string, notes: string) =>
+    apiFetch<{ alert_id: string; status: string; reviewed_at: string }>(
+      ENDPOINTS.alerts.review(id),
+      {
+        method: "PATCH",
+        body: { decision, reviewed_by: reviewedBy, notes },
+      },
+    ),
 };
 
 // ---------- Map ----------
@@ -60,10 +102,7 @@ export const mapService = {
 
 // ---------- Dashboard ----------
 export const dashboardService = {
-  summary: () => apiFetch<DashboardSummary>(ENDPOINTS.dashboard.summary),
-  trends: () => apiFetch<TrendPoint[]>(ENDPOINTS.dashboard.trends),
-  weekly: () => apiFetch<TrendPoint[]>(ENDPOINTS.dashboard.weekly),
-  alertGrowth: () => apiFetch<TrendPoint[]>(ENDPOINTS.dashboard.alertGrowth),
+  all: () => apiFetch<DashboardData>(ENDPOINTS.dashboard.summary),
 };
 
 // ---------- Health ----------
@@ -73,7 +112,20 @@ export const healthService = {
 
 // ---------- Reference ----------
 export const referenceService = {
-  // TODO: confirm whether diseases list comes from /api/reference/diseases
-  // or is embedded in another payload.
   diseases: () => apiFetch<Disease[]>(ENDPOINTS.reference.diseases),
+};
+
+// ---------- Auth ----------
+export const authService = {
+  signup: (data: SignupRequest) =>
+    apiFetch<TokenResponse>(ENDPOINTS.auth.signup, {
+      method: "POST",
+      body: data,
+    }),
+  login: (data: LoginRequest) =>
+    apiFetch<TokenResponse>(ENDPOINTS.auth.login, {
+      method: "POST",
+      body: data,
+    }),
+  me: () => apiFetch<UserOut>(ENDPOINTS.auth.me),
 };

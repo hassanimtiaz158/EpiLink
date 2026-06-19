@@ -3,12 +3,16 @@ import os
 import sys
 from logging.config import fileConfig
 
+from dotenv import load_dotenv
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+# Load .env BEFORE importing core.database so settings read correct values
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 
 from core.database import Base
 from models import DiseaseRegistry, CaseReport, Alert, DriftReport, AuditLog, BaselineCache  # noqa: F401
@@ -17,7 +21,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Use DATABASE_URL from environment if available
+# Use DATABASE_URL from environment if available (overrides alembic.ini default)
 database_url = os.environ.get("DATABASE_URL", "")
 if database_url:
     config.set_main_option("sqlalchemy.url", database_url)
@@ -46,6 +50,10 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     # Get the URL from the main option (set from env or alembic.ini default)
     url = config.get_main_option("sqlalchemy.url")
+    # Ensure async driver for PostgreSQL
+    if url and url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        config.set_main_option("sqlalchemy.url", url)
     connectable = async_engine_from_config(
         {"sqlalchemy.url": url},
         prefix="sqlalchemy.",

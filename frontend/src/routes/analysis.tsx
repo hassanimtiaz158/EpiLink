@@ -1,196 +1,300 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Check, Loader2, Sparkles } from "lucide-react";
-import { z } from "zod";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  Brain,
+  Check,
+  ChevronRight,
+  Info,
+  Loader2,
+  MapPin,
+  Shield,
+  Sparkles,
+  User,
+} from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/layout/AppShell";
 import { analysisService } from "@/lib/api/services";
-import { QUERY_KEYS } from "@/lib/api/config";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { severityBadgeClass, severityLabel } from "@/lib/severity";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { ErrorState } from "@/components/feedback";
-
-const searchSchema = z.object({ id: z.string().optional() });
+import type { AnalysisOutput } from "@/lib/api/types";
 
 export const Route = createFileRoute("/analysis")({
+  beforeLoad: () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
+    if (!token) throw redirect({ to: "/" });
+  },
   head: () => ({
     meta: [
-      { title: "AI Analysis — EpiLink" },
-      {
-        name: "description",
-        content:
-          "Watch the AI pipeline classify, geomap, and assess each report in real time.",
-      },
+      { title: "AI Analysis - EpiLink" },
+      { name: "description", content: "AI-powered disease report analysis using Groq." },
     ],
   }),
-  validateSearch: searchSchema,
   component: AnalysisPage,
 });
 
-const STAGES = [
-  { key: "validated", label: "Data Validated" },
-  { key: "classified", label: "ICD-10 Classification" },
-  { key: "geomapped", label: "Geographic Mapping" },
-  { key: "clustered", label: "Cluster Analysis" },
-  { key: "assessed", label: "Alert Assessment" },
-] as const;
+const SEVERITY_BADGES: Record<string, string> = {
+  low: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  moderate: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  high: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  critical: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+};
+
+const ALERT_BADGES: Record<string, string> = {
+  NORMAL: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  REVIEW: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  HIGH: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+};
+
+const SAMPLE_TEXTS = [
+  "3 cases of acute diarrhea in children under 5, Cairo governorate, suspected cholera. Lab sample taken.",
+  "Female, age 30-59, fever and rash since 3 days, Giza — suspected measles. Contact with confirmed case.",
+  "Male patient with high fever, severe headache, joint pain. Travel history to Red Sea governorate. Suspected dengue.",
+  "Animal bite wound infection in Minya. Patient presenting with fever, muscle spasms. Rabies suspected.",
+  "Cluster of 5 respiratory illness cases in Alexandria. COVID-19 suspected. Two patients hospitalized.",
+];
 
 function AnalysisPage() {
-  const { id } = Route.useSearch();
-  const [playStage, setPlayStage] = useState(0);
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<AnalysisOutput | null>(null);
 
-  const q = useQuery({
-    queryKey: id ? QUERY_KEYS.analysis(id) : ["analysis", "none"],
-    queryFn: () => analysisService.status(id as string),
-    enabled: !!id,
-    refetchInterval: (qr) => {
-      const data = qr.state.data;
-      if (data?.stages?.assessed) return false;
-      return 1500;
+  const analyzeMutation = useMutation({
+    mutationFn: (input: string) => analysisService.analyze(input),
+    onSuccess: (data) => {
+      setResult(data);
+      if (data.success) {
+        toast.success("Analysis complete", { description: data.message });
+      } else {
+        toast.error("Analysis failed", { description: data.message });
+      }
     },
+    onError: (e) => toast.error("Analysis failed", { description: (e as Error).message }),
   });
 
-  // Cosmetic stage reveal for the demo when no id provided
-  useEffect(() => {
-    if (id) return;
-    const t = setInterval(() => {
-      setPlayStage((s) => (s + 1) % (STAGES.length + 2));
-    }, 900);
-    return () => clearInterval(t);
-  }, [id]);
-
-  const result = q.data;
-  const stages = result?.stages;
-
-  const stageDone = (key: (typeof STAGES)[number]["key"], idx: number) => {
-    if (stages) return Boolean(stages[key]);
-    return idx < playStage;
+  const handleSubmit = () => {
+    if (!text.trim()) return;
+    analyzeMutation.mutate(text);
   };
-
-  const completed = STAGES.filter((s, i) => stageDone(s.key, i)).length;
-  const progress = (completed / STAGES.length) * 100;
 
   return (
     <AppShell>
       <div className="mx-auto max-w-4xl">
         <header className="mb-6 flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-indigo-100 text-indigo-700">
-            <Sparkles className="h-5 w-5" />
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+            <Brain className="h-5 w-5" />
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">AI Analysis</h1>
-            <p className="text-sm text-slate-500">
-              {id ? `Processing report ${id}` : "Live pipeline demo"}
+            <p className="text-sm text-muted-foreground">
+              Powered by Groq LLaMA 3. Paste clinical text for instant epidemiological assessment.
             </p>
           </div>
         </header>
 
-        {q.isError && (
-          <div className="mb-4">
-            <ErrorState error={q.error} onRetry={() => q.refetch()} />
-          </div>
-        )}
-
         <Card className="mb-5">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Pipeline progress</CardTitle>
-              <span className="text-xs text-slate-500">
-                {completed}/{STAGES.length} stages
-              </span>
-            </div>
+            <CardTitle className="text-base">Clinical Text Input</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Progress value={progress} className="mb-5 h-2" />
-            <ol className="grid gap-3">
-              {STAGES.map((s, i) => {
-                const done = stageDone(s.key, i);
-                const active = !done && i === completed;
-                return (
-                  <li
-                    key={s.key}
-                    className={cn(
-                      "flex items-center gap-3 rounded-lg border px-4 py-3 transition",
-                      done
-                        ? "border-emerald-200 bg-emerald-50"
-                        : active
-                        ? "border-sky-200 bg-sky-50"
-                        : "border-slate-200 bg-white",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "grid h-7 w-7 place-items-center rounded-full text-white",
-                        done ? "bg-emerald-500" : active ? "bg-sky-500" : "bg-slate-300",
-                      )}
-                    >
-                      {done ? (
-                        <Check className="h-4 w-4" />
-                      ) : active ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <span className="text-xs">{i + 1}</span>
-                      )}
-                    </span>
-                    <span className="text-sm font-medium text-slate-800">
-                      {s.label}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
+          <CardContent className="grid gap-4">
+            <div className="grid gap-1.5">
+              <Label>Paste clinical report, SMS, or case notes</Label>
+              <textarea
+                className="min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="e.g. 3 cases of acute diarrhea in Cairo, suspected cholera. Lab sample taken. Age group under 5."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmit();
+                }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button onClick={handleSubmit} disabled={analyzeMutation.isPending || !text.trim()}>
+                {analyzeMutation.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {analyzeMutation.isPending ? "Analyzing..." : "Run AI Analysis"}
+              </Button>
+              <span className="text-xs text-muted-foreground">or try a sample:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SAMPLE_TEXTS.map((s, i) => (
+                <Button
+                  key={i}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setText(s)}
+                >
+                  Sample {i + 1}
+                </Button>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {result && (
+        {analyzeMutation.isPending && (
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Result</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-4">
-                <Stat label="Disease" value={result.disease} />
-                <Stat label="ICD-10" value={result.icd10} />
-                <Stat
-                  label="Confidence"
-                  value={`${Math.round(result.confidence * 100)}%`}
-                />
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-slate-500">
-                    Alert Level
-                  </div>
-                  <Badge
-                    className={cn(
-                      "mt-1 border",
-                      severityBadgeClass[result.alertLevel],
-                    )}
-                  >
-                    {severityLabel[result.alertLevel]}
-                  </Badge>
-                </div>
-              </div>
+            <CardContent className="flex items-center gap-3 p-6">
+              <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+              <span className="text-sm text-muted-foreground">
+                Sending to Groq LLaMA 3.3-70B for analysis...
+              </span>
             </CardContent>
           </Card>
         )}
 
-        {!id && !result && (
-          <p className="mt-4 text-center text-xs text-slate-500">
-            Submit a report to see live analysis on a real submission.
-          </p>
+        {result && result.success && (
+          <div className="grid gap-4">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4" /> Classification Result
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Badge
+                      className={cn("border text-[10px]", SEVERITY_BADGES[result.severity] ?? "")}
+                    >
+                      {result.severity.toUpperCase()}
+                    </Badge>
+                    <Badge
+                      className={cn("border text-[10px]", ALERT_BADGES[result.alert_level] ?? "")}
+                    >
+                      {result.alert_level}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <InfoRow
+                  icon={<Activity className="h-4 w-4" />}
+                  label="Disease"
+                  value={result.disease_name ?? "Unknown"}
+                />
+                <InfoRow
+                  icon={<Info className="h-4 w-4" />}
+                  label="ICD-10 Code"
+                  value={result.icd10_code ?? "N/A"}
+                />
+                <InfoRow
+                  icon={<Activity className="h-4 w-4" />}
+                  label="Confidence"
+                  value={`${Math.round(result.confidence * 100)}%`}
+                />
+                <InfoRow
+                  icon={<MapPin className="h-4 w-4" />}
+                  label="Governorate"
+                  value={result.governorate ?? "Not detected"}
+                />
+                {result.district && (
+                  <InfoRow
+                    icon={<MapPin className="h-4 w-4" />}
+                    label="District"
+                    value={result.district}
+                  />
+                )}
+                {result.age_group && (
+                  <InfoRow
+                    icon={<User className="h-4 w-4" />}
+                    label="Age Group"
+                    value={result.age_group}
+                  />
+                )}
+                {result.sex && (
+                  <InfoRow icon={<User className="h-4 w-4" />} label="Sex" value={result.sex} />
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{result.summary}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Recommendation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4 text-indigo-500" />
+                  <span className="text-sm font-medium">{result.recommendation}</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {result.risk_factors.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Risk Factors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {result.risk_factors.map((rf, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {rf}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {result.nearby_governorates.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MapPin className="h-4 w-4" /> Nearby Governorates to Monitor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {result.nearby_governorates.map((g, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">
+                        {g}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {result && !result.success && (
+          <Card>
+            <CardContent className="flex items-center gap-3 p-6">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <span className="text-sm text-red-600">{result.message}</span>
+            </CardContent>
+          </Card>
         )}
       </div>
     </AppShell>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div>
-      <div className="text-xs uppercase tracking-wider text-slate-500">{label}</div>
-      <div className="mt-1 text-base font-semibold">{value}</div>
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground">{icon}</span>
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="text-sm font-medium">{value}</div>
+      </div>
     </div>
   );
 }

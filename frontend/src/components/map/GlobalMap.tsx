@@ -16,7 +16,10 @@ export default function GlobalMap({ markers, onSelect }: Props) {
   const [mounted, setMounted] = useState(false);
   const [mod, setMod] = useState<typeof import("react-leaflet") | null>(null);
   // react-leaflet-cluster has no TS declarations published — load dynamically.
-  const [Cluster, setCluster] = useState<React.ComponentType<{ children: React.ReactNode; chunkedLoading?: boolean }> | null>(null);
+  const [Cluster, setCluster] = useState<React.ComponentType<{
+    children: React.ReactNode;
+    chunkedLoading?: boolean;
+  }> | null>(null);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
 
   useEffect(() => {
@@ -25,7 +28,9 @@ export default function GlobalMap({ markers, onSelect }: Props) {
       const [rl, leaflet, cluster] = await Promise.all([
         import("react-leaflet"),
         import("leaflet"),
-        import("react-leaflet-cluster") as Promise<{ default: React.ComponentType<{ children: React.ReactNode; chunkedLoading?: boolean }> }>,
+        import("react-leaflet-cluster") as Promise<{
+          default: React.ComponentType<{ children: React.ReactNode; chunkedLoading?: boolean }>;
+        }>,
       ]);
       setMod(rl);
       setL(leaflet);

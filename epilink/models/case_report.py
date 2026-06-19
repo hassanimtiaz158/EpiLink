@@ -49,7 +49,7 @@ class CaseReport(Base):
         CheckConstraint("age_group IN ('<1', '1-4', '5-14', '15-29', '30-59', '60+')", name="ck_reports_age_group"),
         CheckConstraint("outcome IN ('Alive', 'Dead', 'Unknown')", name="ck_reports_outcome"),
         CheckConstraint("diagnosis_basis IN ('Clinical', 'Lab-confirmed', 'Epidemiological link')", name="ck_reports_diagnosis_basis"),
-        CheckConstraint("submission_mode IN ('online', 'offline-cached', 'sms-fallback')", name="ck_reports_submission_mode"),
+        CheckConstraint("submission_mode IN ('online', 'offline-cached', 'sms-fallback', 'text-extracted', 'image-extracted')", name="ck_reports_submission_mode"),
         CheckConstraint("sync_status IN ('synced', 'pending', 'failed')", name="ck_reports_sync_status"),
         CheckConstraint("nationality IN ('Egyptian', 'Other')", name="ck_reports_nationality_nationality"),
     )
