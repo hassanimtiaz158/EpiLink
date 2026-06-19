@@ -57,6 +57,31 @@ async def list_alerts(
     )
 
 
+@router.get("/alerts/{alert_id}", response_model=AlertOut)
+async def get_alert(
+    alert_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        alert_uuid = UUID(alert_id)
+    except ValueError:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Alert not found", "code": "ALERT_NOT_FOUND"},
+        )
+
+    result = await db.execute(select(Alert).where(Alert.id == alert_uuid))
+    alert = result.scalar_one_or_none()
+
+    if alert is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": "Alert not found", "code": "ALERT_NOT_FOUND"},
+        )
+
+    return AlertOut.model_validate(alert)
+
+
 @router.patch("/alerts/{alert_id}/review", response_model=ReviewResponse)
 async def review_alert(
     alert_id: str,
@@ -80,13 +105,8 @@ async def review_alert(
             content={"error": "Alert not found", "code": "ALERT_NOT_FOUND"},
         )
 
-    if alert.review_decision is not None:
-        return JSONResponse(
-            status_code=409,
-            content={"error": "Alert has already been reviewed", "code": "ALREADY_REVIEWED"},
-        )
-
     reviewed_at = datetime.now(timezone.utc)
+    original_status = alert.status
     alert.status = review_data.decision
     alert.reviewed_at = reviewed_at
     alert.review_decision = review_data.decision
@@ -96,7 +116,7 @@ async def review_alert(
     await db.refresh(alert)
 
     # If confirmed and not already dispatched, dispatch now
-    if review_data.decision == "confirmed" and alert.status != "dispatched":
+    if review_data.decision == "confirmed" and original_status != "dispatched":
         await dispatch_alert_record(alert)
 
     return ReviewResponse(

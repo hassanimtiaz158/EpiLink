@@ -137,6 +137,12 @@
     border-color: var(--color-border);
   }
 
+  html {
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
@@ -144,9 +150,19 @@
 }
 
 @keyframes epi-pulse {
-  0% { transform: scale(0.6); opacity: 0.6; }
-  100% { transform: scale(2.2); opacity: 0; }
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
-.leaflet-container { font-family: inherit; }
-.leaflet-popup-content-wrapper { border-radius: 10px; }
+.leaflet-container {
+  font-family: inherit;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}

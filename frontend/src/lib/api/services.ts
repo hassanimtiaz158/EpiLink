@@ -2,37 +2,73 @@ import { apiFetch } from "./client";
 import { ENDPOINTS } from "./config";
 import type {
   Alert,
+  AlertListResponse,
   AnalysisResult,
+  AnalysisOutput,
+  DashboardData,
   Disease,
   HealthStatus,
   MapMarker,
   ReportInput,
+  TrendPoint,
+  InputResponse,
+  TextInputRequest,
+  FormInputRequest,
+  ImageInputRequest,
+  OCRTextInputRequest,
+  TokenResponse,
+  SignupRequest,
+  LoginRequest,
+  UserOut,
 } from "./types";
 
 // ---------- Reports ----------
 export const reportsService = {
+  list: () => apiFetch<Report[]>(ENDPOINTS.reports.list),
   create: (input: ReportInput) =>
-    apiFetch<{
-      status: string;
-      report_id: string;
-      reporting_group: string;
-      alert_triggered: boolean;
-      message: string;
-    }>(ENDPOINTS.reports.create, {
+    apiFetch<any>(ENDPOINTS.reports.create, {
       method: "POST",
       body: input,
     }),
 };
 
+// ---------- Input Processing (New Unified Endpoints) ----------
+export const inputService = {
+  text: (request: TextInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.text, {
+      method: "POST",
+      body: request,
+    }),
+  form: (request: FormInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.form, {
+      method: "POST",
+      body: request,
+    }),
+  image: (request: ImageInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.image, {
+      method: "POST",
+      body: request,
+    }),
+  ocrText: (request: OCRTextInputRequest) =>
+    apiFetch<InputResponse>(ENDPOINTS.input.ocrText, {
+      method: "POST",
+      body: request,
+    }),
+  health: () => apiFetch<HealthStatus>(ENDPOINTS.input.health),
+};
+
 // ---------- Analysis ----------
 export const analysisService = {
-  // TODO: confirm whether analysis is sync or async (polling vs WebSocket).
+  analyze: (text: string) =>
+    apiFetch<AnalysisOutput>(ENDPOINTS.analysis.analyze, {
+      method: "POST",
+      body: { text, source: "manual" },
+    }),
   run: (reportId: string) =>
     apiFetch<AnalysisResult>(ENDPOINTS.analysis.run(reportId), {
       method: "POST",
     }),
-  status: (reportId: string) =>
-    apiFetch<AnalysisResult>(ENDPOINTS.analysis.status(reportId)),
+  status: (reportId: string) => apiFetch<AnalysisResult>(ENDPOINTS.analysis.status(reportId)),
 };
 
 // ---------- Alerts ----------
@@ -41,60 +77,22 @@ export const alertsService = {
    * List alerts. Backend returns: { total: int, alerts: AlertOut[] }
    */
   list: (params?: {
-    status?: string;
     governorate?: string;
+    status?: string;
     icd10_code?: string;
     alert_level?: string;
     limit?: number;
     offset?: number;
-  }) =>
-    apiFetch<{ total: number; alerts: Alert[] }>(ENDPOINTS.alerts.list, {
-      query: params,
-    }),
-
-  /**
-   * Get a single alert by id.
-   * No dedicated GET /alerts/{id} endpoint exists in the backend yet.
-   * Fetches the full list and finds by id.
-   */
-  get: (id: string) =>
-    apiFetch<{ total: number; alerts: Alert[] }>(ENDPOINTS.alerts.list).then(
-      (res) => {
-        const found = res.alerts.find((a) => a.id === id);
-        if (!found) throw new Error(`Alert ${id} not found`);
-        return found;
-      },
-    ),
-
-  /**
-   * Review an alert. Backend AlertReviewSchema: { decision, reviewed_by, notes }
-   * decision: "confirmed" | "dismissed"
-   */
-  review: (
-    id: string,
-    decision: string,
-    notes = "",
-    reviewed_by = "epidemiologist",
-  ) =>
+  }) => apiFetch<AlertListResponse>(ENDPOINTS.alerts.list, { query: params }),
+  get: (id: string) => apiFetch<Alert>(ENDPOINTS.alerts.byId(id)),
+  review: (id: string, decision: "confirmed" | "dismissed", reviewedBy: string, notes: string) =>
     apiFetch<{ alert_id: string; status: string; reviewed_at: string }>(
       ENDPOINTS.alerts.review(id),
       {
         method: "PATCH",
-        body: { decision, reviewed_by, notes },
+        body: { decision, reviewed_by: reviewedBy, notes },
       },
     ),
-
-  /** Confirm/approve an alert */
-  approve: (id: string) => alertsService.review(id, "confirmed"),
-
-  /** Dismiss an alert */
-  dismiss: (id: string) => alertsService.review(id, "dismissed"),
-
-  /**
-   * Request more data — no dedicated backend action yet.
-   * Uses "under_review" as the closest proxy status.
-   */
-  requestData: (id: string) => alertsService.review(id, "under_review"),
 };
 
 // ---------- Map ----------
@@ -107,32 +105,7 @@ export const mapService = {
 
 // ---------- Dashboard ----------
 export const dashboardService = {
-  summary: () =>
-    apiFetch<{
-      summary: {
-        total_reports_this_week: number;
-        total_alerts_this_week: number;
-        alert_rate: number;
-        alert_rate_status: string;
-        pending_reviews: number;
-      };
-      weekly_trend: Array<{
-        epi_week: number;
-        week_start: string;
-        total_reports: number;
-        group_a_reports: number;
-        group_b_reports: number;
-        alerts_dispatched: number;
-      }>;
-      top_diseases: Array<{ disease: string; icd10: string; count: number }>;
-      recent_alerts: Alert[];
-      drift: {
-        last_audit?: string;
-        mean_confidence: number;
-        human_confirmation_rate: number;
-        status: string;
-      };
-    }>(ENDPOINTS.dashboard.summary),
+  all: () => apiFetch<DashboardData>(ENDPOINTS.dashboard.summary),
 };
 
 // ---------- Health ----------
@@ -149,4 +122,19 @@ export const healthService = {
 // ---------- Reference ----------
 export const referenceService = {
   diseases: () => apiFetch<Disease[]>(ENDPOINTS.reference.diseases),
+};
+
+// ---------- Auth ----------
+export const authService = {
+  signup: (data: SignupRequest) =>
+    apiFetch<TokenResponse>(ENDPOINTS.auth.signup, {
+      method: "POST",
+      body: data,
+    }),
+  login: (data: LoginRequest) =>
+    apiFetch<TokenResponse>(ENDPOINTS.auth.login, {
+      method: "POST",
+      body: data,
+    }),
+  me: () => apiFetch<UserOut>(ENDPOINTS.auth.me),
 };

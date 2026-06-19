@@ -1,11 +1,11 @@
-import type { ReportInput } from "./api/types";
-import { reportsService } from "./api/services";
+import type { FormInputRequest } from "./api/types";
+import { inputService } from "./api/services";
 
 const KEY = "epilink:offline-reports";
 
 export interface QueuedReport {
   id: string;
-  payload: any;
+  payload: FormInputRequest;
   queuedAt: string;
 }
 
@@ -26,11 +26,11 @@ function write(items: QueuedReport[]) {
 
 export const offlineQueue = {
   list: read,
-  enqueue(payload: ReportInput) {
+  enqueue(payload: FormInputRequest) {
     const items = read();
     items.push({
       id: crypto.randomUUID(),
-      payload,
+      payload: { ...payload, submission_mode: "offline-cached" },
       queuedAt: new Date().toISOString(),
     });
     write(items);
@@ -46,7 +46,7 @@ export const offlineQueue = {
     const remaining: QueuedReport[] = [];
     for (const item of items) {
       try {
-        await reportsService.create(item.payload);
+        await inputService.form(item.payload);
       } catch {
         remaining.push(item);
       }

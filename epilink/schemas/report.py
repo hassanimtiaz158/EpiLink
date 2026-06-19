@@ -18,7 +18,7 @@ class ReportSchema(BaseModel):
     hospitalized: bool
     outcome: Literal["Alive", "Dead", "Unknown"]
     lab_sample_taken: bool
-    submission_mode: Literal["online", "offline-cached", "sms-fallback"] = "online"
+    submission_mode: Literal["online", "offline-cached", "sms-fallback", "text-extracted", "image-extracted"] = "online"
 
 
 class ReportResponse(BaseModel):
