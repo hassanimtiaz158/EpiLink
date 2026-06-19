@@ -110,11 +110,11 @@ export function AppShell({
     sidebarOpen ? "translate-x-0" : "-translate-x-full"
 )}
 >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-4 md:px-5 py-4 border-b border-border">
           <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sm">
             <Activity className="h-5 w-5" />
           </div>
-          <div>
+          <div className="pl-3.5">
             <div className="text-base font-semibold tracking-tight text-foreground">EpiLink</div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
               Outbreak Intelligence
