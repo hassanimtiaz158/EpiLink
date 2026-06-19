@@ -17,14 +17,10 @@ from routers.report import router as report_router
 from routers.alert import router as alert_router
 from routers.dashboard import router as dashboard_router
 from routers.sms import router as sms_router
-<<<<<<< HEAD
 from routers.input import router as input_router
 from routers.reference import router as reference_router
 from routers.analysis import router as analysis_router
 from routers.auth import router as auth_router
-=======
-from routers.reference import router as reference_router
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 from services.drift_monitor import scheduled_drift_check
 from core.security import hash_password
 
@@ -171,14 +167,10 @@ app.include_router(report_router)
 app.include_router(alert_router)
 app.include_router(dashboard_router)
 app.include_router(sms_router)
-<<<<<<< HEAD
 app.include_router(input_router)
 app.include_router(reference_router)
 app.include_router(analysis_router)
 app.include_router(auth_router)
-=======
-app.include_router(reference_router)
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 
 
 @app.exception_handler(Exception)

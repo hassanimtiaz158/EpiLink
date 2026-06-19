@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
-<<<<<<< HEAD
 import { cn } from "@/lib/utils";
 import type { Alert as AlertItem } from "@/lib/api/types";
 
@@ -25,8 +24,6 @@ const LEVEL_BADGES: Record<string, string> = {
   REVIEW: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   NORMAL: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
 };
-=======
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 
 export const Route = createFileRoute("/alerts")({
   beforeLoad: () => {
@@ -52,7 +49,6 @@ function AlertsPage() {
     queryFn: () => alertsService.list(),
   });
 
-<<<<<<< HEAD
   const rawAlerts: AlertItem[] = alertsQ.data?.alerts ?? [];
 
   const filtered = useMemo(() => {
@@ -64,22 +60,6 @@ function AlertsPage() {
       return true;
     });
   }, [rawAlerts, status, level, q]);
-=======
-  const alerts = alertsQ.data ?? [];
-  const diseases = useMemo(
-    () => Array.from(new Set(alerts.map((a) => a.icd10_code))).sort(),
-    [alerts],
-  );
-
-  const filtered = alerts.filter((a) => {
-    if (status !== "all" && a.status !== status) return false;
-    if (disease !== "all" && a.icd10_code !== disease) return false;
-    if ((a.confidence ?? 0) * 100 < minConf) return false;
-    if (q && !`${a.icd10_code} ${a.governorate}`.toLowerCase().includes(q.toLowerCase()))
-      return false;
-    return true;
-  });
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 
   return (
     <AppShell>
@@ -113,10 +93,7 @@ function AlertsPage() {
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-<<<<<<< HEAD
               <SelectItem value="dispatched">Dispatched</SelectItem>
-=======
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
               <SelectItem value="under_review">Under Review</SelectItem>
               <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="dismissed">Dismissed</SelectItem>
@@ -152,25 +129,13 @@ function AlertsPage() {
               <div className="min-w-[180px] flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-base font-semibold">{a.icd10_code}</span>
-<<<<<<< HEAD
                   <Badge className={cn("border text-[10px]", LEVEL_BADGES[a.alert_level] ?? "")}>
                     {a.alert_level}
-=======
-                  <Badge
-                    className={`${
-                      a.alert_level === "high"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
-                    } border text-[10px]`}
-                  >
-                    {a.alert_level || "standard"}
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
                   </Badge>
                   <Badge variant="outline" className="text-[10px] capitalize">
                     {a.status.replace("_", " ")}
                   </Badge>
                 </div>
-<<<<<<< HEAD
                 <div className="text-xs text-muted-foreground">{a.governorate}</div>
               </div>
               {a.confidence != null && (
@@ -191,19 +156,6 @@ function AlertsPage() {
                   {new Date(a.created_at).toLocaleDateString()}
                 </div>
               </div>
-=======
-                <div className="text-xs text-slate-500">{a.governorate}</div>
-              </div>
-              <Stat label="Confidence" value={`${Math.round((a.confidence ?? 0) * 100)}%`} />
-              <Stat
-                label="Z-Score"
-                value={(a.z_score ?? 0).toFixed(2)}
-              />
-              <Stat
-                label="Created"
-                value={new Date(a.created_at).toLocaleDateString()}
-              />
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
               <Button asChild size="sm" variant="outline">
                 <Link to="/review" search={{ id: a.id } as never}>
                   Review <ArrowRight className="ml-1 h-4 w-4" />

@@ -1,9 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CloudOff, Save, Send, Stethoscope, Camera, FileText as FileTextIcon } from "lucide-react";
+import { CloudOff, Send, Stethoscope, Camera, FileText as FileTextIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useRef } from "react";
 import { AppShell } from "@/components/layout/AppShell";
@@ -13,9 +10,7 @@ import { offlineQueue } from "@/lib/offline-queue";
 import { useOnline } from "@/hooks/use-online";
 import type { FormInputRequest } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -24,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const Route = createFileRoute("/submit")({
@@ -82,36 +76,8 @@ function SubmitReportPage() {
     queryFn: () => referenceService.diseases(),
   });
 
-<<<<<<< HEAD
   const formMutation = useMutation({
     mutationFn: (data: FormInputRequest) => inputService.form(data),
-=======
-  const submitMutation = useMutation({
-    mutationFn: (data: FormValues) =>
-      reportsService.create({
-        facility_id: data.facility || "FAC001",
-        physician_id: "DOC001",
-        governorate: data.location,
-        district: data.location,
-
-        // TEMPORARY FOR HACKATHON
-        icd10_code: "A80",
-
-        age_group: "15-29",
-        sex: "Male",
-        nationality: "Egyptian",
-
-        symptom_onset_date: new Date().toISOString().split("T")[0],
-
-        diagnosis_basis: "Clinical",
-
-        hospitalized: false,
-        outcome: "Alive",
-        lab_sample_taken: false,
-
-        submission_mode: "online",
-      }),
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
     onSuccess: (r) => {
       if (r.success) {
         toast.success("Report submitted", { description: r.message });
@@ -123,7 +89,6 @@ function SubmitReportPage() {
     onError: (e) => toast.error("Submission failed", { description: (e as Error).message }),
   });
 
-<<<<<<< HEAD
   const textMutation = useMutation({
     mutationFn: (text: string) => inputService.text({ text, source: "manual" }),
     onSuccess: (r) => {
@@ -175,81 +140,6 @@ function SubmitReportPage() {
       imageMutation.mutate(base64);
     };
     reader.readAsDataURL(file);
-=======
-  const onSubmit = (data: FormValues) => {
-    if (!online) {
-      offlineQueue.enqueue({
-        facility_id: data.facility || "FAC001",
-        physician_id: "DOC001",
-        governorate: data.location,
-        district: data.location,
-        age_group: "15-29",
-        sex: "Male",
-        nationality: "Egyptian",
-
-        icd10_code: "A80",
-
-        symptom_onset_date: new Date().toISOString().split("T")[0],
-        diagnosis_basis: "Clinical",
-
-        hospitalized: false,
-        outcome: "Alive",
-        lab_sample_taken: false,
-        submission_mode: "offline-cached",
-      });
-      toast.success("Saved offline", {
-        description: "Will sync automatically when you reconnect.",
-      });
-      reset();
-      return;
-    }
-    submitMutation.mutate({
-      facility_id: data.facility ?? "UNKNOWN",
-      physician_id: "demo-doctor",
-      governorate: data.location,
-      district: "UNKNOWN",
-      age_group: "30-59",
-      sex: "Male",
-      nationality: "Egyptian",
-      icd10_code: "A00", // temporary
-      symptom_onset_date: new Date().toISOString(),
-      diagnosis_basis: "Clinical",
-      hospitalized: false,
-      outcome: "Unknown",
-      lab_sample_taken: false,
-      submission_mode: "online",
-    });
-  };
-
-  const saveOffline = () => {
-    const data = watch();
-    const parsed = schema.safeParse(data);
-    if (!parsed.success) {
-      toast.error("Fill in required fields first");
-      return;
-    }
-    offlineQueue.enqueue({
-      facility_id: parsed.data.facility || "FAC001",
-      physician_id: "DOC001",
-      governorate: parsed.data.location,
-      district: parsed.data.location,
-      age_group: "15-29",
-      sex: "Male",
-      nationality: "Egyptian",
-
-      icd10_code: "A80",
-
-      symptom_onset_date: new Date().toISOString().split("T")[0],
-      diagnosis_basis: "Clinical",
-
-      hospitalized: false,
-      outcome: "Alive",
-      lab_sample_taken: false,
-      submission_mode: "offline-cached",
-    });
-    toast.success("Saved offline");
-    reset();
->>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   };
 
   return (
