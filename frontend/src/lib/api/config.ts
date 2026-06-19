@@ -22,6 +22,7 @@ export const MAPBOX_STYLE: string =
  * If your FastAPI exposes different paths, edit this map only.
  */
 export const ENDPOINTS = {
+<<<<<<< HEAD
   // Reports (v1)
   reports: {
     list: "/api/v1/reports",
@@ -35,13 +36,32 @@ export const ENDPOINTS = {
     image: "/api/input/image",
     ocrText: "/api/input/ocr-text",
     health: "/api/input/health",
+=======
+  reports: {
+    create: "/api/v1/report",
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   },
-  // AI Analysis pipeline
+
+  alerts: {
+    list: "/api/v1/alerts",
+    review: (id: string) => `/api/v1/alerts/${id}/review`,
+  },
+
+  dashboard: {
+    summary: "/api/v1/dashboard",
+  },
+
+  health: {
+    status: "/health",
+  },
+
+  // keep placeholders
   analysis: {
     analyze: "/api/v1/analysis/analyze",
     run: (reportId: string) => `/api/v1/analysis/${reportId}`,
     status: (reportId: string) => `/api/v1/analysis/${reportId}/status`,
   },
+<<<<<<< HEAD
   // Outbreak alerts (v1)
   alerts: {
     list: "/api/v1/alerts",
@@ -49,10 +69,14 @@ export const ENDPOINTS = {
     review: (id: string) => `/api/v1/alerts/${id}/review`,
   },
   // Map data
+=======
+
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   map: {
     markers: "/api/v1/map/markers",
     clusters: "/api/v1/map/clusters",
   },
+<<<<<<< HEAD
   // Dashboard analytics (v1)
   dashboard: {
     summary: "/api/v1/dashboard",
@@ -68,6 +92,9 @@ export const ENDPOINTS = {
     lastSync: "/health",
   },
   // Reference data
+=======
+
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   reference: {
     diseases: "/api/v1/reference/diseases",
   },

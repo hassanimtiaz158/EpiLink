@@ -41,6 +41,7 @@ export interface ReportInput {
   physician_id: string;
   governorate: string;
   district: string;
+<<<<<<< HEAD
   age_group: AgeGroup;
   sex: Sex;
   nationality: Nationality;
@@ -61,6 +62,18 @@ export interface Report extends ReportInput {
   disease_name: string;
   reporting_group: "A" | "B";
   created_at: string;
+=======
+  age_group: "<1" | "1-4" | "5-14" | "15-29" | "30-59" | "60+";
+  sex: "Male" | "Female";
+  nationality: string;
+  icd10_code: string;
+  symptom_onset_date: string;
+  diagnosis_basis: "Clinical" | "Lab-confirmed" | "Epidemiological link";
+  hospitalized: boolean;
+  outcome: "Alive" | "Dead" | "Unknown";
+  lab_sample_taken: boolean;
+  submission_mode: "online" | "offline-cached" | "sms-fallback";
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 }
 
 export interface MapMarker {
@@ -73,6 +86,27 @@ export interface MapMarker {
   location: string;
 }
 
+<<<<<<< HEAD
+=======
+export interface Alert {
+  id: string;
+  case_report_id?: string;
+  icd10_code: string;
+  governorate: string;
+  alert_level?: string;
+  z_score?: number;
+  confidence: number;
+  status: string;
+  dispatched_at?: string;
+  dispatch_targets?: Record<string, unknown>;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_decision?: string;
+  review_notes?: string;
+  created_at: string;
+}
+
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 export interface AnalysisResult {
   reportId: string;
   disease: string;
@@ -131,13 +165,21 @@ export interface TopDiseaseItem {
 }
 
 export interface DashboardDrift {
+<<<<<<< HEAD
   last_audit: string | null;
+=======
+  last_audit?: string;
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   mean_confidence: number;
   human_confirmation_rate: number;
   status: string;
 }
 
+<<<<<<< HEAD
 export interface DashboardData {
+=======
+export interface DashboardResponse {
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   summary: DashboardSummary;
   weekly_trend: WeeklyTrendItem[];
   top_diseases: TopDiseaseItem[];

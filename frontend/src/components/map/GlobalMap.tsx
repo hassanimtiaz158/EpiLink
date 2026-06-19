@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import type { MapMarker } from "@/lib/api/types";
 import { severityColor } from "@/lib/severity";
 import { MAPBOX_TOKEN, MAPBOX_STYLE } from "@/lib/api/config";
+import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 
 interface Props {
   markers: MapMarker[];

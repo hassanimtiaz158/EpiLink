@@ -3,7 +3,7 @@ from pydantic import Field
 
 
 class Settings(BaseSettings):
-    database_url: str = "postgresql+asyncpg://epilink:password@localhost:5432/epilink_db"
+    database_url: str = "postgresql+asyncpg://epilink:password@db:5432/epilink_db"
     ministry_webhook_url: str = "https://mock-ministry.epilink.io/webhook"
     who_fhir_url: str = Field(default="https://mock-who.epilink.io/fhir", alias="WHO_WEBHOOK_URL")
     admin_webhook_url: str = "https://mock-admin.epilink.io/webhook"

@@ -25,13 +25,15 @@ import type {
 
 // ---------- Reports ----------
 export const reportsService = {
+<<<<<<< HEAD
   list: () => apiFetch<Report[]>(ENDPOINTS.reports.list),
+=======
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
   create: (input: ReportInput) =>
-    apiFetch<Report>(ENDPOINTS.reports.create, {
-      method: "POST",
-      body: input,
-    }),
-  get: (id: string) => apiFetch<Report>(ENDPOINTS.reports.byId(id)),
+  apiFetch<any>(ENDPOINTS.reports.create, {
+    method: "POST",
+    body: input,
+  }),
 };
 
 // ---------- Input Processing (New Unified Endpoints) ----------
@@ -76,6 +78,7 @@ export const analysisService = {
 // ---------- Alerts ----------
 export const alertsService = {
   list: (params?: {
+<<<<<<< HEAD
     governorate?: string;
     status?: string;
     icd10_code?: string;
@@ -92,6 +95,19 @@ export const alertsService = {
         body: { decision, reviewed_by: reviewedBy, notes },
       },
     ),
+=======
+    status?: string;
+  }) =>
+    apiFetch<any[]>(ENDPOINTS.alerts.list, {
+      query: params,
+    }),
+
+  review: (id: string, status: string) =>
+    apiFetch<any>(ENDPOINTS.alerts.review(id), {
+      method: "PATCH",
+      body: { status },
+    }),
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 };
 
 // ---------- Map ----------
@@ -102,7 +118,12 @@ export const mapService = {
 
 // ---------- Dashboard ----------
 export const dashboardService = {
+<<<<<<< HEAD
   all: () => apiFetch<DashboardData>(ENDPOINTS.dashboard.summary),
+=======
+  summary: () =>
+    apiFetch<any>(ENDPOINTS.dashboard.summary),
+>>>>>>> 67e0f965c0d324d8b9d3c8e6af0746f272eb1adc
 };
 
 // ---------- Health ----------

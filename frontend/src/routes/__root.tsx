@@ -128,11 +128,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         rel: "stylesheet",
-        href: "https://unpkg.com/react-leaflet-cluster@4.1.3/lib/assets/MarkerCluster.css",
+        href: "https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css",
       },
       {
         rel: "stylesheet",
-        href: "https://unpkg.com/react-leaflet-cluster@4.1.3/lib/assets/MarkerCluster.Default.css",
+        href: "https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css",
       },
     ],
   }),
