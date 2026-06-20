@@ -140,7 +140,9 @@ class OutbreakDetector:
 
         if data_points < 4:
             if recent_sample_size >= 3:
-                return (AlertLevel.REVIEW, 0.0, confidence)
+                pseudo_std = max(math.sqrt(recent_mean), 0.001)
+                z_score = recent_mean / pseudo_std
+                return (AlertLevel.REVIEW, z_score, confidence)
             else:
                 return (AlertLevel.NORMAL, 0.0, confidence)
 

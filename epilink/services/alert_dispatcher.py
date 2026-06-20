@@ -52,6 +52,9 @@ def _build_fhir_bundle(alert: Alert, report) -> dict:
     }
 
 
+CONFIDENCE_AUTO_CONFIRM_THRESHOLD = 0.85
+
+
 async def trigger_immediate_alert(
     db: AsyncSession,
     report,
@@ -61,6 +64,9 @@ async def trigger_immediate_alert(
 ) -> Alert:
     alert_id = uuid.uuid4()
 
+    auto_confirmed = confidence >= CONFIDENCE_AUTO_CONFIRM_THRESHOLD
+    status = "confirmed" if auto_confirmed else "pending"
+
     alert = Alert(
         id=alert_id,
         case_report_id=report.id,
@@ -69,17 +75,20 @@ async def trigger_immediate_alert(
         alert_level=alert_level.value,
         z_score=z_score,
         confidence=confidence,
-        status="pending",
+        status=status,
     )
     db.add(alert)
     await db.commit()
     await db.refresh(alert)
 
     logger.info(
-        f"Alert {alert_id} created (pending review) — Level: {alert_level.value}, "
+        f"Alert {alert_id} created ({status}) — Level: {alert_level.value}, "
         f"Disease: {report.icd10_code}, Governorate: {report.governorate}, "
         f"Z-score: {z_score:.2f}, Confidence: {confidence:.2f}"
     )
+
+    if auto_confirmed:
+        await dispatch_alert_record(alert)
 
     return alert
 
