@@ -186,7 +186,7 @@ function SubmitReportPage() {
                 formMutation.mutate(data);
               }}
               isPending={formMutation.isPending}
-              online={online}
+              online={online ?? false}
             />
           </TabsContent>
 

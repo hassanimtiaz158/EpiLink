@@ -1,0 +1,11 @@
+INFO:     Will watch for changes in these directories: ['D:\\EpiLink\\epilink']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [4340] using WatchFiles
+INFO:     Started server process [23940]
+INFO:     Waiting for application startup.
+2026-06-20 16:21:42,375 [INFO] apscheduler.scheduler: Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-06-20 16:21:42,595 [INFO] apscheduler.scheduler: Added job "scheduled_drift_check" to job store "default"
+2026-06-20 16:21:42,595 [INFO] apscheduler.scheduler: Scheduler started
+2026-06-20 16:21:42,595 [INFO] epilink: APScheduler started — weekly drift check scheduled for Sunday 00:00 UTC
+2026-06-20 16:21:42,595 [INFO] epilink: EpiLink API started — Egypt DES surveillance system
+INFO:     Application startup complete.
