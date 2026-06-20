@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
 import type { Alert as AlertDetail } from "@/lib/api/types";
+import { AuthGate } from "@/components/auth-gate";
 
 const searchSchema = z.object({ id: z.string().optional() });
 
@@ -21,10 +22,6 @@ const LEVEL_BADGES: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/review")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "Alert Review - EpiLink" },
@@ -32,7 +29,11 @@ export const Route = createFileRoute("/review")({
     ],
   }),
   validateSearch: searchSchema,
-  component: ReviewPage,
+  component: () => (
+    <AuthGate minRole="epi_officer">
+      <ReviewPage />
+    </AuthGate>
+  ),
 });
 
 /**
@@ -62,7 +63,7 @@ function ReviewPage() {
   // List of pending alerts (shown when no specific id is in the URL)
   const listQ = useQuery({
     queryKey: ["alerts"],
-    queryFn: () => alertsService.list({ status: "under_review" }),
+    queryFn: () => alertsService.list({ status: "pending" }),
     enabled: !id,
   });
 

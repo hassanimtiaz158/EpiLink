@@ -105,6 +105,7 @@ export interface AnalysisOutput {
   summary: string;
   recommendation: string;
   risk_factors: string[];
+  differential_diagnoses: string[];
   nearby_governorates: string[];
   message: string;
 }

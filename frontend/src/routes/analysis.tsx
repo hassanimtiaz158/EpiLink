@@ -24,19 +24,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { AnalysisOutput } from "@/lib/api/types";
+import { AuthGate } from "@/components/auth-gate";
 
 export const Route = createFileRoute("/analysis")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "AI Analysis - EpiLink" },
       { name: "description", content: "AI-powered disease report analysis using Groq." },
     ],
   }),
-  component: AnalysisPage,
+  component: () => (
+    <AuthGate minRole="epi_officer">
+      <AnalysisPage />
+    </AuthGate>
+  ),
 });
 
 const SEVERITY_BADGES: Record<string, string> = {
@@ -58,6 +59,7 @@ const SAMPLE_TEXTS = [
   "Male patient with high fever, severe headache, joint pain. Travel history to Red Sea governorate. Suspected dengue.",
   "Animal bite wound infection in Minya. Patient presenting with fever, muscle spasms. Rabies suspected.",
   "Cluster of 5 respiratory illness cases in Alexandria. COVID-19 suspected. Two patients hospitalized.",
+  "Irregular fever and jaundice, history of travel to a malaria-endemic area in Sudan.",
 ];
 
 function AnalysisPage() {
@@ -249,6 +251,21 @@ function AnalysisPage() {
                       </Badge>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {result.differential_diagnoses.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Differential Diagnoses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {result.differential_diagnoses.map((d, i) => (
+                      <li key={i} className="text-sm text-muted-foreground">{d}</li>
+                    ))}
+                  </ul>
                 </CardContent>
               </Card>
             )}

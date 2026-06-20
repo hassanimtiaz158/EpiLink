@@ -18,6 +18,7 @@ import {
 import { LoadingState, EmptyState, ErrorState } from "@/components/feedback";
 import { cn } from "@/lib/utils";
 import type { Alert as AlertItem } from "@/lib/api/types";
+import { AuthGate } from "@/components/auth-gate";
 
 const LEVEL_BADGES: Record<string, string> = {
   HIGH: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
@@ -26,17 +27,17 @@ const LEVEL_BADGES: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/alerts")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "Alerts - EpiLink" },
       { name: "description", content: "Browse and filter outbreak alerts." },
     ],
   }),
-  component: AlertsPage,
+  component: () => (
+    <AuthGate>
+      <AlertsPage />
+    </AuthGate>
+  ),
 });
 
 function AlertsPage() {

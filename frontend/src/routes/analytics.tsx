@@ -8,19 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, ErrorState, EmptyState } from "@/components/feedback";
 import { apiFetch } from "@/lib/api/client";
 import type { DashboardData } from "@/lib/api/types";
+import { AuthGate } from "@/components/auth-gate";
 
 export const Route = createFileRoute("/analytics")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "Dashboard - EpiLink" },
       { name: "description", content: "Surveillance dashboard: reports, alerts, and trends." },
     ],
   }),
-  component: DashboardPage,
+  component: () => (
+    <AuthGate>
+      <DashboardPage />
+    </AuthGate>
+  ),
 });
 
 function DashboardPage() {

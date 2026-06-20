@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Globe2, Radio, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { AuthGate } from "@/components/auth-gate";
 import GlobalMap from "@/components/map/GlobalMap";
 import { ENDPOINTS } from "@/lib/api/config";
 import { Badge } from "@/components/ui/badge";
@@ -55,12 +56,6 @@ const GOVERNORATE_COORDS: Record<string, [number, number]> = {
 };
 
 export const Route = createFileRoute("/dashboard")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) {
-      throw redirect({ to: "/" });
-    }
-  },
   head: () => ({
     meta: [
       { title: "Dashboard - EpiLink" },
@@ -70,7 +65,11 @@ export const Route = createFileRoute("/dashboard")({
       },
     ],
   }),
-  component: DashboardPage,
+  component: () => (
+    <AuthGate>
+      <DashboardPage />
+    </AuthGate>
+  ),
 });
 
 function DashboardPage() {

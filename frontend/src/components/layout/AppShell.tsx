@@ -11,7 +11,6 @@ import {
   Menu,
   Sparkles,
   WifiOff,
-  Menu,
   X,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -23,20 +22,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
+const ROLE_RANK: Record<string, number> = { viewer: 0, epi_officer: 1, admin: 2 };
+
 type NavItem = {
   to: string;
   label: string;
   icon: typeof Globe2;
   exact?: boolean;
+  minRole: keyof typeof ROLE_RANK;
 };
 const NAV: NavItem[] = [
-  { to: "/dashboard", label: "Global Map", icon: Globe2 },
-  { to: "/submit", label: "Submit Report", icon: FileText },
-  { to: "/analysis", label: "AI Analysis", icon: Sparkles },
-  { to: "/alerts", label: "Alerts", icon: AlertTriangle },
-  { to: "/review", label: "Alert Review", icon: CheckSquare },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/health", label: "Health Status", icon: HeartPulse },
+  { to: "/dashboard", label: "Global Map", icon: Globe2, minRole: "viewer" },
+  { to: "/submit", label: "Submit Report", icon: FileText, minRole: "epi_officer" },
+  { to: "/analysis", label: "AI Analysis", icon: Sparkles, minRole: "epi_officer" },
+  { to: "/alerts", label: "Alerts", icon: AlertTriangle, minRole: "viewer" },
+  { to: "/review", label: "Alert Review", icon: CheckSquare, minRole: "epi_officer" },
+  { to: "/analytics", label: "Analytics", icon: BarChart3, minRole: "viewer" },
+  { to: "/health", label: "Health Status", icon: HeartPulse, minRole: "admin" },
 ];
 
 export function AppShell({
@@ -131,14 +133,17 @@ export function AppShell({
        
    
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {NAV.map((item) => {
+          {NAV.filter((item) => {
+            const userRank = ROLE_RANK[user?.role ?? "viewer"] ?? 0;
+            return userRank >= ROLE_RANK[item.minRole];
+          }).map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
             const Icon = item.icon;
             return (
               <Link
                 key={item.to}
                 to={item.to}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
                   active

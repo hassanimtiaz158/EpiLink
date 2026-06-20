@@ -7,19 +7,20 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingState, ErrorState } from "@/components/feedback";
 import type { HealthStatus } from "@/lib/api/types";
+import { AuthGate } from "@/components/auth-gate";
 
 export const Route = createFileRoute("/health")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "Health Status - EpiLink" },
-      { name: "description", content: "Live API and database health." },
+      { name: "description", content: "System health status for EpiLink backend." },
     ],
   }),
-  component: HealthPage,
+  component: () => (
+    <AuthGate minRole="admin">
+      <HealthPage />
+    </AuthGate>
+  ),
 });
 
 function HealthPage() {

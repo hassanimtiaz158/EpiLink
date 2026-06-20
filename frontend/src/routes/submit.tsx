@@ -20,19 +20,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AuthGate } from "@/components/auth-gate";
 
 export const Route = createFileRoute("/submit")({
-  beforeLoad: () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("epilink_token") : null;
-    if (!token) throw redirect({ to: "/" });
-  },
   head: () => ({
     meta: [
       { title: "Submit Report - EpiLink" },
       { name: "description", content: "Submit a disease report via form, text, or image." },
     ],
   }),
-  component: SubmitReportPage,
+  component: () => (
+    <AuthGate minRole="epi_officer">
+      <SubmitReportPage />
+    </AuthGate>
+  ),
 });
 
 const GOVERNORATES = [
