@@ -17,10 +17,9 @@ from services.drift_monitor import weekly_drift_check
 
 
 async def _poll_alert(icd10_code: str, timeout: float = 5.0):
-    """Poll for alert with dispatched status using a fresh session."""
+    """Poll for alert with pending status using a fresh session."""
     start = datetime.now()
     while (datetime.now() - start).total_seconds() < timeout:
-        # Use a fresh session to avoid session caching issues
         async with core_db.async_session_factory() as db:
             result = await db.execute(
                 select(Alert)
@@ -28,7 +27,7 @@ async def _poll_alert(icd10_code: str, timeout: float = 5.0):
                 .order_by(Alert.created_at.desc())
             )
             alert = result.scalars().first()
-            if alert is not None and alert.status == "dispatched":
+            if alert is not None and alert.status == "pending":
                 return alert
         await asyncio.sleep(0.1)
     return None
@@ -55,19 +54,6 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
     async def test_full_alert_lifecycle(
         self, client: AsyncClient, db_session: AsyncSession, seed_diseases, httpx_mock
     ):
-        httpx_mock.add_response(
-            url=settings.ministry_webhook_url,
-            method="POST",
-            status_code=200,
-            text="ok",
-        )
-        httpx_mock.add_response(
-            url=settings.who_fhir_url,
-            method="POST",
-            status_code=200,
-            text="ok",
-        )
-
         payload = {
             "facility_id": "EGY001",
             "physician_id": "dr_test_01",
@@ -98,13 +84,26 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
         report = report_result.scalar_one_or_none()
         assert report is not None
 
-        # Give background task time to start
         await asyncio.sleep(0.1)
 
         alert = await _poll_alert("A39.0", timeout=5.0)
         assert alert is not None, "Alert was not created by background task"
         assert alert.icd10_code == "A39.0"
-        assert alert.status == "dispatched"
+        assert alert.status == "pending"
+        assert alert.confidence > 0
+
+        httpx_mock.add_response(
+            url=settings.ministry_webhook_url,
+            method="POST",
+            status_code=200,
+            text="ok",
+        )
+        httpx_mock.add_response(
+            url=settings.who_fhir_url + "/Bundle",
+            method="POST",
+            status_code=200,
+            text="ok",
+        )
 
         patch_response = await client.patch(
             f"/api/v1/alerts/{alert.id}/review",
@@ -114,6 +113,8 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
         patch_data = patch_response.json()
         assert patch_data["status"] == "confirmed"
         assert patch_data["alert_id"] == str(alert.id)
+
+        await asyncio.sleep(0.2)
 
 
 class TestDemoScenario2_OfflineSync:
@@ -158,19 +159,6 @@ class TestDemoScenario3_SMSFallback:
     async def test_sms_webhook(
         self, client: AsyncClient, db_session: AsyncSession, seed_diseases, httpx_mock
     ):
-        httpx_mock.add_response(
-            url=settings.ministry_webhook_url,
-            method="POST",
-            status_code=200,
-            text="ok",
-        )
-        httpx_mock.add_response(
-            url=settings.who_fhir_url,
-            method="POST",
-            status_code=200,
-            text="ok",
-        )
-
         response = await client.post(
             "/api/v1/sms-webhook",
             data={"Body": "RPT#EGY042#A39.0#15-29#M#ALIVE"},
@@ -190,6 +178,7 @@ class TestDemoScenario3_SMSFallback:
         alert = await _poll_alert_any("A39.0", timeout=5.0)
         assert alert is not None, "Alert was not created by background task"
         assert alert.icd10_code == "A39.0"
+        assert alert.status == "pending"
 
 
 class TestDemoScenario4_DriftDetection:

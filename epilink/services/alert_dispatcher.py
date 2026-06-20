@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -76,40 +75,10 @@ async def trigger_immediate_alert(
     await db.commit()
     await db.refresh(alert)
 
-    payload = {
-        "alert_id": str(alert_id),
-        "icd10": report.icd10_code,
-        "disease_name": report.disease_name,
-        "governorate": report.governorate,
-        "alert_level": alert_level.value,
-        "z_score": z_score,
-        "confidence": confidence,
-        "submitted_at": report.submitted_at.isoformat(),
-    }
-
-    fhir_payload = _build_fhir_bundle(alert, report)
-
-    async def post_webhook(url: str, label: str, json_data: dict):
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.post(url, json=json_data)
-                resp.raise_for_status()
-        except Exception as e:
-            logger.warning(f"Webhook to {label} ({url}) failed: {e}")
-
-    # Fire-and-forget all webhooks (spec requirement: never block request handler)
-    asyncio.create_task(post_webhook(settings.ministry_webhook_url, "Ministry", payload))
-    asyncio.create_task(post_webhook(settings.who_fhir_url, "WHO FHIR", fhir_payload))
-
-    # Update alert status
-    alert.status = "dispatched"
-    alert.dispatched_at = datetime.now(timezone.utc)
-    alert.dispatch_targets = {"ministry": True, "who_fhir": True, "sms": False}
-    await db.commit()
-
     logger.info(
-        f"Alert {alert_id} dispatched — Level: {alert_level.value}, "
-        f"Disease: {report.icd10_code}, Governorate: {report.governorate}"
+        f"Alert {alert_id} created (pending review) — Level: {alert_level.value}, "
+        f"Disease: {report.icd10_code}, Governorate: {report.governorate}, "
+        f"Z-score: {z_score:.2f}, Confidence: {confidence:.2f}"
     )
 
     return alert

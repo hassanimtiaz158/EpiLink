@@ -136,14 +136,18 @@ class OutbreakDetector:
 
         baseline_mean, baseline_std, data_points = baseline_data
 
+        confidence = min(1.0, recent_sample_size / 10.0)
+
         if data_points < 4:
-            return (AlertLevel.NORMAL, 0.0, 0.0)
+            if recent_sample_size >= 3:
+                return (AlertLevel.REVIEW, 0.0, confidence)
+            else:
+                return (AlertLevel.NORMAL, 0.0, confidence)
 
         if baseline_std == 0.0:
             baseline_std = 0.001
 
         z_score = (recent_mean - baseline_mean) / baseline_std
-        confidence = min(1.0, recent_sample_size / 10.0)
 
         if z_score > self.threshold and confidence >= self.confidence_threshold:
             return (AlertLevel.HIGH, z_score, confidence)
