@@ -7,14 +7,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.security import hash_password, verify_password, create_access_token, decode_access_token
+from core.security import hash_password, verify_password, create_access_token, get_current_user
 from models.user import User
 from schemas.auth import UserSignup, UserLogin, TokenResponse, UserOut
 
 logger = logging.getLogger("epilink.auth_router")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-security = HTTPBearer(auto_error=False)
 
 
 def _user_out(user: User) -> UserOut:
@@ -25,25 +24,6 @@ def _user_out(user: User) -> UserOut:
         role=user.role,
         is_active=user.is_active,
     )
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security),
-    db: AsyncSession = Depends(get_db),
-) -> User:
-    if not credentials:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_access_token(credentials.credentials)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
-    result = await db.execute(select(User).where(User.id == user_id))
-    user = result.scalar_one_or_none()
-    if not user or not user.is_active:
-        raise HTTPException(status_code=401, detail="User not found or inactive")
-    return user
 
 
 @router.post("/signup", response_model=TokenResponse)

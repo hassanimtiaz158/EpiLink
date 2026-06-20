@@ -20,5 +20,6 @@ class AnalysisResponse(BaseModel):
     summary: str = ""
     recommendation: str = ""
     risk_factors: list[str] = []
+    differential_diagnoses: list[str] = []
     nearby_governorates: list[str] = []
     message: str = ""

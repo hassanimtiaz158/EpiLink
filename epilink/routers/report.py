@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import database as core_db
 from core.database import get_db
-from core.security import hash_physician_id
+from core.security import hash_physician_id, require_role
 from models.case_report import CaseReport
+from models.user import User
 from schemas.report import ReportSchema, ReportResponse
 from services.alert_dispatcher import trigger_immediate_alert
 from services.anomaly import OutbreakDetector
@@ -27,7 +28,11 @@ router = APIRouter(prefix="/api/v1", tags=["report"])
 
 
 @router.post("/report", status_code=201)
-async def submit_report(report_data: ReportSchema, db: AsyncSession = Depends(get_db)):
+async def submit_report(
+    report_data: ReportSchema,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     if not await validate_icd10(db, report_data.icd10_code):
         return JSONResponse(
             status_code=400,

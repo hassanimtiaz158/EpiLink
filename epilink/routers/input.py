@@ -8,8 +8,9 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
-from core.security import hash_physician_id
+from core.security import hash_physician_id, require_role
 from models.case_report import CaseReport
+from models.user import User
 from schemas.input import (
     TextInputRequest,
     FormInputRequest,
@@ -106,7 +107,11 @@ async def _process_anomaly_check(report: CaseReport):
 
 
 @router.post("/text", response_model=InputResponse)
-async def process_text_input(request: TextInputRequest, db: AsyncSession = Depends(get_db)):
+async def process_text_input(
+    request: TextInputRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     try:
         detected_lang = await translation_service.detect_language(request.text)
         translations = await translation_service.translate_both(request.text, detected_lang)
@@ -158,7 +163,11 @@ async def process_text_input(request: TextInputRequest, db: AsyncSession = Depen
 
 
 @router.post("/form", response_model=InputResponse)
-async def process_form_input(request: FormInputRequest, db: AsyncSession = Depends(get_db)):
+async def process_form_input(
+    request: FormInputRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     try:
         if not await validate_icd10(db, request.icd10_code):
             return JSONResponse(
@@ -221,7 +230,11 @@ async def process_form_input(request: FormInputRequest, db: AsyncSession = Depen
 
 
 @router.post("/image", response_model=InputResponse)
-async def process_image_input(request: ImageInputRequest, db: AsyncSession = Depends(get_db)):
+async def process_image_input(
+    request: ImageInputRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     try:
         ocr_text, ocr_confidence = await ocr_service.extract_text_from_base64(
             request.image_base64, request.image_format
@@ -293,7 +306,11 @@ async def process_image_input(request: ImageInputRequest, db: AsyncSession = Dep
 
 
 @router.post("/ocr-text", response_model=InputResponse)
-async def process_ocr_text_input(request: OCRTextInputRequest, db: AsyncSession = Depends(get_db)):
+async def process_ocr_text_input(
+    request: OCRTextInputRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     try:
         source_lang = request.source_language or await translation_service.detect_language(request.text)
         translations = await translation_service.translate_both(request.text, source_lang)

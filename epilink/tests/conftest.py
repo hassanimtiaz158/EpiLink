@@ -100,3 +100,23 @@ async def seed_diseases(db_session: AsyncSession):
         )
         db_session.add(d)
     await db_session.commit()
+
+
+@pytest_asyncio.fixture
+async def auth_headers(db_session: AsyncSession) -> dict[str, str]:
+    """Create a test admin user and return auth headers."""
+    from models.user import User
+    from core.security import hash_password, create_access_token
+
+    user = User(
+        email="test-admin@test.com",
+        hashed_password=hash_password("testpass123"),
+        full_name="Test Admin",
+        role="admin",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    token = create_access_token({"sub": str(user.id), "role": user.role})
+    return {"Authorization": f"Bearer {token}"}

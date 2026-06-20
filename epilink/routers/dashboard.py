@@ -7,9 +7,11 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.security import require_role
 from models.alert import Alert
 from models.case_report import CaseReport
 from models.drift_report import DriftReport
+from models.user import User
 from schemas.alert import (
     AlertOut, DashboardOut, DashboardSummary, DashboardDrift,
     WeeklyTrendItem, TopDiseaseItem,
@@ -25,6 +27,7 @@ async def get_dashboard(
     weeks: int = Query(4, ge=1, le=52),
     governorate: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("viewer", "epi_officer", "admin")),
 ):
     now = datetime.now(timezone.utc)
     current_week_start = now - timedelta(days=now.weekday())

@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.security import require_role
+from models.user import User
 from services.groq_analyzer import groq_analyzer
 from services.translation import translation_service
 from services.classifier import classify_reporting_group
@@ -15,7 +17,11 @@ router = APIRouter(prefix="/api/v1", tags=["analysis"])
 
 
 @router.post("/analysis/analyze", response_model=AnalysisResponse)
-async def analyze_report(request: AnalysisRequest, db: AsyncSession = Depends(get_db)):
+async def analyze_report(
+    request: AnalysisRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
+):
     try:
         detected_lang = await translation_service.detect_language(request.text)
         translations = await translation_service.translate_both(request.text, detected_lang)
@@ -42,6 +48,7 @@ async def analyze_report(request: AnalysisRequest, db: AsyncSession = Depends(ge
             summary=result.summary,
             recommendation=result.recommendation,
             risk_factors=result.risk_factors,
+            differential_diagnoses=result.differential_diagnoses,
             nearby_governorates=result.nearby_governorates,
             message=f"Analysis complete — {result.disease_name or 'Unknown disease'} ({result.alert_level})",
         )

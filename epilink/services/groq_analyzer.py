@@ -18,9 +18,18 @@ Analyze the following clinical report text and produce a structured JSON analysi
 REPORT TEXT:
 {text}
 
-Analyze and return ONLY valid JSON with these fields:
+EPIDEMIOLOGICAL DECISION RULES (apply these in strict priority order):
+1. TRAVEL HISTORY is the strongest differentiator. If the report mentions travel to a known endemic area, the disease associated with that area MUST be the top differential — even if symptoms alone suggest a different disease.
+   - Travel to malaria-endemic areas (Sudan, Sub-Saharan Africa, Southeast Asia) + fever → Malaria (B50/B51) is primary differential.
+   - Travel to cholera-endemic areas + watery diarrhea → Cholera (A00.1) is primary differential.
+   - Travel to dengue-endemic areas + fever + rash → Dengue (A97) is primary differential.
+2. EXPOSURE CONTEXT overrides symptom-only matching. Occupation (e.g. livestock worker → Brucellosis A23), animal contact (→ Rabies A82, Anthrax A22), water contact (→ Schistosomiasis B65), and vector exposure (→ West Nile A92.3, Rift Valley A92.4) are strong signals.
+3. PRIOR OUTBREAKS in the area or governorate raise the probability of the same disease recurring.
+4. SYMPTOM CLUSTERING: fever + jaundice alone could be Hepatitis or Malaria — but travel history to a malaria-endemic area tips the balance toward Malaria. Always list both as differentials, ranked by epidemiological plausibility.
+
+Return ONLY valid JSON with these fields:
 {{
-  "disease_name": "detected disease name",
+  "disease_name": "detected disease name (primary differential based on epidemiological reasoning above)",
   "icd10_code": "ICD-10 code from Egypt DES list or null",
   "confidence": 0.0 to 1.0,
   "severity": "low" | "moderate" | "high" | "critical",
@@ -31,7 +40,8 @@ Analyze and return ONLY valid JSON with these fields:
   "sex": "Male" or "Female" or null,
   "summary": "1-2 sentence clinical summary",
   "recommendation": "recommended action (e.g. 'dispatch alert', 'escalate to ministry', 'monitor', 'no action needed')",
-  "risk_factors": ["list of risk factors identified"],
+  "risk_factors": ["list of risk factors identified, prioritize travel/exposure factors"],
+  "differential_diagnoses": ["ranked list of top 3-5 differential diagnoses with brief reasoning"],
   "nearby_governorates": ["list of neighboring governorates to monitor"]
 }}
 
@@ -95,6 +105,7 @@ class AnalysisResult:
     summary: str = ""
     recommendation: str = ""
     risk_factors: list[str] = field(default_factory=list)
+    differential_diagnoses: list[str] = field(default_factory=list)
     nearby_governorates: list[str] = field(default_factory=list)
     raw_response: str = ""
 
@@ -152,6 +163,7 @@ class GroqAnalyzer:
                     summary=parsed.get("summary", ""),
                     recommendation=parsed.get("recommendation", ""),
                     risk_factors=parsed.get("risk_factors", []),
+                    differential_diagnoses=parsed.get("differential_diagnoses", []),
                     nearby_governorates=parsed.get("nearby_governorates", []),
                     raw_response=content,
                 )

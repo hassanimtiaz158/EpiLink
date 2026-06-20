@@ -52,7 +52,7 @@ async def _poll_alert_any(icd10_code: str, timeout: float = 5.0):
 class TestDemoScenario1_GroupAOnlineHappyPath:
     @pytest.mark.asyncio
     async def test_full_alert_lifecycle(
-        self, client: AsyncClient, db_session: AsyncSession, seed_diseases, httpx_mock
+        self, client: AsyncClient, db_session: AsyncSession, seed_diseases, httpx_mock, auth_headers
     ):
         payload = {
             "facility_id": "EGY001",
@@ -69,7 +69,7 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
             "lab_sample_taken": True,
             "submission_mode": "online",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
@@ -108,6 +108,7 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
         patch_response = await client.patch(
             f"/api/v1/alerts/{alert.id}/review",
             json={"decision": "confirmed", "reviewed_by": "epi-officer-01", "notes": "Confirmed cluster"},
+            headers=auth_headers,
         )
         assert patch_response.status_code == 200
         patch_data = patch_response.json()
@@ -120,7 +121,7 @@ class TestDemoScenario1_GroupAOnlineHappyPath:
 class TestDemoScenario2_OfflineSync:
     @pytest.mark.asyncio
     async def test_offline_cached_report(
-        self, client: AsyncClient, db_session: AsyncSession, seed_diseases
+        self, client: AsyncClient, db_session: AsyncSession, seed_diseases, auth_headers
     ):
         payload = {
             "facility_id": "EGY050",
@@ -137,7 +138,7 @@ class TestDemoScenario2_OfflineSync:
             "lab_sample_taken": True,
             "submission_mode": "offline-cached",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"

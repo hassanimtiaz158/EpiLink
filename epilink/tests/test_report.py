@@ -4,7 +4,7 @@ from httpx import AsyncClient
 
 class TestReport:
     @pytest.mark.asyncio
-    async def test_submit_group_a_report(self, client: AsyncClient, seed_diseases):
+    async def test_submit_group_a_report(self, client: AsyncClient, seed_diseases, auth_headers):
         payload = {
             "facility_id": "EGY001",
             "physician_id": "dr_ahmed_01",
@@ -21,7 +21,7 @@ class TestReport:
             "lab_sample_taken": True,
             "submission_mode": "online",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
@@ -30,7 +30,7 @@ class TestReport:
         assert data["alert_triggered"] is True
 
     @pytest.mark.asyncio
-    async def test_submit_group_b_report(self, client: AsyncClient, seed_diseases):
+    async def test_submit_group_b_report(self, client: AsyncClient, seed_diseases, auth_headers):
         payload = {
             "facility_id": "EGY002",
             "physician_id": "dr_sara_02",
@@ -47,7 +47,7 @@ class TestReport:
             "lab_sample_taken": True,
             "submission_mode": "online",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"
@@ -55,7 +55,7 @@ class TestReport:
         assert data["alert_triggered"] is False
 
     @pytest.mark.asyncio
-    async def test_invalid_icd10(self, client: AsyncClient, seed_diseases):
+    async def test_invalid_icd10(self, client: AsyncClient, seed_diseases, auth_headers):
         payload = {
             "facility_id": "EGY003",
             "physician_id": "dr_test",
@@ -71,13 +71,13 @@ class TestReport:
             "lab_sample_taken": False,
             "submission_mode": "online",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 400
         data = response.json()
         assert "INVALID_ICD10" in str(data)
 
     @pytest.mark.asyncio
-    async def test_offline_sync_submission(self, client: AsyncClient, seed_diseases):
+    async def test_offline_sync_submission(self, client: AsyncClient, seed_diseases, auth_headers):
         payload = {
             "facility_id": "EGY010",
             "physician_id": "dr_offline",
@@ -93,7 +93,7 @@ class TestReport:
             "lab_sample_taken": False,
             "submission_mode": "offline-cached",
         }
-        response = await client.post("/api/v1/report", json=payload)
+        response = await client.post("/api/v1/report", json=payload, headers=auth_headers)
         assert response.status_code == 201
         data = response.json()
         assert data["status"] == "received"

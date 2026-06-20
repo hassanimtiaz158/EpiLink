@@ -9,7 +9,9 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import get_db
+from core.security import require_role
 from models.alert import Alert
+from models.user import User
 from schemas.alert import AlertOut, AlertReviewSchema, ReviewResponse, AlertListResponse
 from services.alert_dispatcher import dispatch_alert_record
 
@@ -27,6 +29,7 @@ async def list_alerts(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("viewer", "epi_officer", "admin")),
 ):
     stmt = select(Alert)
     count_stmt = select(func.count(Alert.id))
@@ -61,6 +64,7 @@ async def list_alerts(
 async def get_alert(
     alert_id: str,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("viewer", "epi_officer", "admin")),
 ):
     try:
         alert_uuid = UUID(alert_id)
@@ -87,6 +91,7 @@ async def review_alert(
     alert_id: str,
     review_data: AlertReviewSchema,
     db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("epi_officer", "admin")),
 ):
     try:
         alert_uuid = UUID(alert_id)
