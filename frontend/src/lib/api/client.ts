@@ -34,10 +34,20 @@ export function clearToken() {
 }
 
 function buildUrl(path: string, query?: RequestOptions["query"]) {
-  const url = new URL(
-    path.startsWith("http") ? path : `${API_BASE_URL}${path}`,
-    typeof window !== "undefined" ? window.location.origin : "http://localhost",
-  );
+  if (path.startsWith("http")) {
+    const url = new URL(path);
+    if (query) {
+      for (const [k, v] of Object.entries(query)) {
+        if (v === undefined || v === null) continue;
+        url.searchParams.set(k, String(v));
+      }
+    }
+    return url.toString();
+  }
+
+  const base = API_BASE_URL.replace(/\/+$/, "");
+  const full = `${base}${path}`;
+  const url = new URL(full);
   if (query) {
     for (const [k, v] of Object.entries(query)) {
       if (v === undefined || v === null) continue;
@@ -65,7 +75,15 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   try {
     res = await fetch(buildUrl(path, query), init);
   } catch (e) {
-    throw new ApiError(e instanceof Error ? e.message : "Network error", 0, null);
+    const msg = e instanceof Error ? e.message : "Network error";
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      throw new ApiError(
+        `Cannot reach server at ${API_BASE_URL}. The backend may be starting up (Render free tier takes ~30s on first request). Please wait and try again.`,
+        0,
+        null,
+      );
+    }
+    throw new ApiError(msg, 0, null);
   }
 
   const text = await res.text();
