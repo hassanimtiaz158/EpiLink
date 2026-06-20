@@ -58,7 +58,7 @@ async def get_dashboard(
     alert_rate_status = "NORMAL" if 0.005 <= alert_rate <= 0.15 else "DRIFT_DETECTED"
 
     # Pending reviews
-    pending_stmt = select(func.count(Alert.id)).where(Alert.status == "under_review")
+    pending_stmt = select(func.count(Alert.id)).where(Alert.status == "pending")
     pending_result = await db.execute(pending_stmt)
     pending_reviews = pending_result.scalar() or 0
 
@@ -150,20 +150,37 @@ async def get_dashboard(
     recent_result = await db.execute(recent_alerts_stmt)
     recent_alerts = [AlertOut.model_validate(a) for a in recent_result.scalars().all()]
 
-    # Drift info from latest drift report
-    drift_stmt = select(DriftReport).order_by(DriftReport.audit_run_at.desc()).limit(1)
-    drift_result = await db.execute(drift_stmt)
-    latest_drift = drift_result.scalars().first()
+    # Drift metrics — compute live from alerts this week
+    drift = DashboardDrift(
+        mean_confidence=mean_confidence,
+        status=alert_rate_status,
+    )
 
-    if latest_drift:
-        drift = DashboardDrift(
-            last_audit=latest_drift.audit_run_at.isoformat() if latest_drift.audit_run_at else None,
-            mean_confidence=float(latest_drift.mean_confidence) if latest_drift.mean_confidence else 0.0,
-            human_confirmation_rate=float(latest_drift.human_confirmation_rate) if latest_drift.human_confirmation_rate else 0.0,
-            status=latest_drift.alert_rate_status or "NORMAL",
-        )
-    else:
-        drift = DashboardDrift()
+    # Human confirmation rate from reviewed alerts this week
+    confirmed_stmt = select(func.count(Alert.id)).where(
+        Alert.created_at >= current_week_start,
+        Alert.created_at < current_week_end,
+        Alert.review_decision == "confirmed",
+    )
+    dismissed_stmt = select(func.count(Alert.id)).where(
+        Alert.created_at >= current_week_start,
+        Alert.created_at < current_week_end,
+        Alert.review_decision == "dismissed",
+    )
+    confirmed_count = (await db.execute(confirmed_stmt)).scalar() or 0
+    dismissed_count = (await db.execute(dismissed_stmt)).scalar() or 0
+    total_reviewed = confirmed_count + dismissed_count
+    if total_reviewed > 0:
+        drift.human_confirmation_rate = confirmed_count / total_reviewed
+
+    # Last drift audit timestamp
+    drift_audit_stmt = select(DriftReport.audit_run_at).order_by(
+        DriftReport.audit_run_at.desc()
+    ).limit(1)
+    last_audit_result = await db.execute(drift_audit_stmt)
+    last_audit = last_audit_result.scalar()
+    if last_audit:
+        drift.last_audit = last_audit.isoformat()
 
     return DashboardOut(
         summary=DashboardSummary(

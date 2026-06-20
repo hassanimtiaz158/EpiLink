@@ -18,6 +18,49 @@ class TestZScore:
     """Verify z_score is non-zero for repeated cases with no historical baseline."""
 
     @pytest.mark.asyncio
+    async def test_zscore_nonzero_for_single_case(
+        self, db_session: AsyncSession, seed_diseases
+    ):
+        """Even a single case with no baseline produces a non-zero z_score."""
+        icd10_code = "A80"
+        governorate = "Cairo"
+        now = datetime.now(timezone.utc)
+
+        report = CaseReport(
+            id=uuid.uuid4(),
+            report_id=uuid.uuid4(),
+            submitted_at=now,
+            epi_week=now.isocalendar()[1],
+            facility_id="EGY-ZSCORE-SINGLE",
+            physician_id="dr-single",
+            governorate=governorate,
+            district="Heliopolis",
+            age_group="5-14",
+            sex="Male",
+            icd10_code=icd10_code,
+            disease_name="Acute Flaccid Paralysis",
+            reporting_group="A",
+            symptom_onset_date=now.date(),
+            diagnosis_basis="Clinical",
+            hospitalized=True,
+            outcome="Alive",
+            lab_sample_taken=True,
+            submission_mode="online",
+        )
+        db_session.add(report)
+        await db_session.commit()
+
+        detector = OutbreakDetector()
+        alert_level, z_score, confidence = await detector.check_cluster(
+            db_session, governorate, icd10_code
+        )
+
+        assert z_score > 0, f"Single case should have z_score > 0, got {z_score}"
+        assert confidence == pytest.approx(0.1, abs=0.01)
+        # z = (1 - 0.5) / sqrt(0.5) ≈ 0.71
+        assert z_score == pytest.approx(0.71, abs=0.05)
+
+    @pytest.mark.asyncio
     async def test_zscore_nonzero_for_cluster(
         self, db_session: AsyncSession, seed_diseases, auth_headers, httpx_mock
     ):

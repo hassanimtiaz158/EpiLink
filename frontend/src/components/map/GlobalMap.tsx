@@ -1,13 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import type { MapMarker } from "@/lib/api/types";
 import { severityColor } from "@/lib/severity";
-import { MAPBOX_TOKEN, MAPBOX_STYLE } from "@/lib/api/config";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import HeatmapLayer from "./HeatMapLayer";
-
-
 interface Props {
   markers: MapMarker[];
   onSelect?: (m: MapMarker) => void;
@@ -27,14 +23,14 @@ export default function GlobalMap({ markers, onSelect }: Props) {
   }> | null>(null);
   const [L, setL] = useState<typeof import("leaflet") | null>(null);
   const [userPos, setUserPos] = useState<[number, number] | null>(null);
-
-
+  const mapRef = useRef<any>(null);
+  const fittedRef = useRef(false);
 
   useEffect(() => {
     if (typeof navigator !== "undefined" && "geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserPos([pos.coords.latitude, pos.coords.longitude]),
-        (err) => console.warn("Geolocation error:", err)
+        (err) => console.warn("Geolocation error:", err),
       );
     }
   }, []);
@@ -55,22 +51,13 @@ export default function GlobalMap({ markers, onSelect }: Props) {
     })();
   }, []);
 
-  const heatPoints = useMemo(
-    () =>
-      markers.map((m) => ({
-        lat: m.lat,
-        lng: m.lng,
-        intensity:
-          m.severity === "critical"
-            ? m.reports
-            : m.severity === "high"
-              ? m.reports * 0.8
-              : m.severity === "moderate"
-                ? m.reports * 0.5
-                : m.reports * 0.2,
-      })),
-    [markers]
-  );
+  useEffect(() => {
+    if (!mapRef.current || markers.length === 0 || fittedRef.current || !L) return;
+    const map = mapRef.current;
+    const bounds = L.latLngBounds(markers.map((m) => [m.lat, m.lng] as [number, number]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 8 });
+    fittedRef.current = true;
+  }, [markers, L]);
 
   if (!mounted || !mod || !L || !Cluster) {
     return (
@@ -80,13 +67,9 @@ export default function GlobalMap({ markers, onSelect }: Props) {
 
   const { MapContainer, TileLayer, Marker, Popup, ZoomControl, CircleMarker } = mod;
 
-  const tileUrl = MAPBOX_TOKEN
-    ? `https://api.mapbox.com/styles/v1/${MAPBOX_STYLE}/tiles/{z}/{x}/{y}?access_token=${MAPBOX_TOKEN}`
-    : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
-  const attribution = MAPBOX_TOKEN
-    ? '&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-
+  const tileUrl = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+  const attribution =
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
 
   const makeIcon = (sev: MapMarker["severity"], reports: number) => {
     const color = severityColor[sev];
@@ -103,16 +86,16 @@ export default function GlobalMap({ markers, onSelect }: Props) {
 
   return (
     <MapContainer
-      center={[15, 10]}
-      zoom={2}
+      center={[26.8, 30.6]}
+      zoom={6}
       minZoom={2}
       worldCopyJump
       zoomControl={false}
-      style={{ height: "100%", width: "100%", background: "#eaf2f8" }}
+      style={{ height: "100%", width: "100%", background: "#0f172a" }}
+      ref={mapRef}
     >
       <TileLayer url={tileUrl} attribution={attribution} />
       <ZoomControl position="bottomright" />
-      <HeatmapLayer points={heatPoints} />
       <Cluster chunkedLoading>
         {markers.map((m) => (
           <Marker

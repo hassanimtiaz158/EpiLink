@@ -139,12 +139,16 @@ class OutbreakDetector:
         confidence = min(1.0, recent_sample_size / 10.0)
 
         if data_points < 4:
-            if recent_sample_size >= 3:
-                pseudo_std = max(math.sqrt(recent_mean), 0.001)
-                z_score = recent_mean / pseudo_std
+            # No historical baseline — Poisson z-score with null hypothesis
+            # λ₀ = 0.5: low endemic background per 4-week window
+            lambda_null = 0.5
+            z_score = (recent_sample_size - lambda_null) / math.sqrt(lambda_null)
+            if z_score > self.threshold:
+                return (AlertLevel.HIGH, z_score, confidence)
+            elif z_score > 1.5:
                 return (AlertLevel.REVIEW, z_score, confidence)
             else:
-                return (AlertLevel.NORMAL, 0.0, confidence)
+                return (AlertLevel.NORMAL, z_score, confidence)
 
         if baseline_std == 0.0:
             baseline_std = 0.001

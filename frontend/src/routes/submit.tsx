@@ -110,20 +110,16 @@ function SubmitReportPage() {
       inputService.image({ image_base64: imageBase64, image_format: "jpeg" }),
     onSuccess: (r) => {
       if (r.success) {
-        toast.success("Image processed successfully", {
+        toast.success("Report submitted", {
           description: r.message,
           duration: 6000,
         });
+        if (r.report_id) navigate({ to: "/dashboard" });
       } else {
         toast.warning("Image processed", {
           description: r.message,
           duration: 6000,
         });
-      }
-      if (r.structured_data?.icd10_code) {
-        toast.info(
-          `Detected: ${r.structured_data.icd10_code} — Confidence: ${Math.round((r.confidence_score ?? 0) * 100)}%`,
-        );
       }
       if (r.warnings.length > 0) {
         r.warnings.forEach((w) => toast.info(`Note: ${w.message}`));
@@ -202,6 +198,16 @@ function SubmitReportPage() {
               onUpload={handleImageUpload}
               isPending={imageMutation.isPending}
               fileRef={fileInputRef}
+              result={
+                imageMutation.data
+                  ? {
+                      success: imageMutation.data.success,
+                      message: imageMutation.data.message,
+                      icd10_code: imageMutation.data.structured_data?.icd10_code,
+                      confidence: imageMutation.data.confidence_score ?? undefined,
+                    }
+                  : null
+              }
             />
           </TabsContent>
         </Tabs>
@@ -412,10 +418,12 @@ function ImageTab({
   onUpload,
   isPending,
   fileRef,
+  result,
 }: {
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isPending: boolean;
   fileRef: React.RefObject<HTMLInputElement | null>;
+  result?: { success: boolean; message: string; icd10_code?: string; confidence?: number } | null;
 }) {
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -455,20 +463,42 @@ function ImageTab({
               />
             </div>
           )}
-          <Button
-            onClick={() => fileRef.current?.click()}
-            disabled={isPending}
-            variant="outline"
-            className="h-24 border-dashed"
-          >
-            <Camera className="mr-2 h-6 w-6" />
-            {isPending ? "Extracting text with AI Vision..." : "Click to upload image"}
-          </Button>
+          {!preview && (
+            <Button
+              onClick={() => fileRef.current?.click()}
+              disabled={isPending}
+              variant="outline"
+              className="h-24 border-dashed"
+            >
+              <Camera className="mr-2 h-6 w-6" />
+              {isPending ? "Extracting text with AI Vision..." : "Click to upload image"}
+            </Button>
+          )}
           {isPending && (
             <p className="text-xs text-muted-foreground">
               Groq Vision AI is reading the document, extracting text, and classifying the
               disease...
             </p>
+          )}
+          {result && (
+            <div
+              className={`rounded-lg border p-4 ${result.success ? "border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30" : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"}`}
+            >
+              <p className="text-sm font-medium">{result.message}</p>
+              {result.icd10_code && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Detected: <span className="font-semibold">{result.icd10_code}</span>
+                  {result.confidence != null && (
+                    <> — Confidence: {Math.round(result.confidence * 100)}%</>
+                  )}
+                </p>
+              )}
+            </div>
+          )}
+          {preview && !isPending && !result && (
+            <Button onClick={() => fileRef.current?.click()} variant="outline" className="w-full">
+              <Camera className="mr-2 h-4 w-4" /> Upload different image
+            </Button>
           )}
         </div>
       </CardContent>

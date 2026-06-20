@@ -98,8 +98,8 @@ function DashboardPage() {
                       <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                       <YAxis tick={{ fontSize: 11 }} />
                       <Tooltip />
-                      <Bar dataKey="reports" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="alerts" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="reports" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="alerts" fill="#f59e0b" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
@@ -125,7 +125,7 @@ function DashboardPage() {
                         tick={{ fontSize: 11 }}
                       />
                       <Tooltip />
-                      <Bar dataKey="count" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
